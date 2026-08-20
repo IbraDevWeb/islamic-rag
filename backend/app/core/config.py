@@ -1,0 +1,39 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    app_name: str = "Islamic RAG API"
+    app_env: str = "development"
+    app_host: str = "0.0.0.0"
+    app_port: int = 8000
+
+    postgres_db: str = "islamic_rag"
+    postgres_user: str = "islamic_rag"
+    postgres_password: str = "change_me_local_only"
+    postgres_host: str = "postgres"
+    postgres_port: int = 5432
+
+    qdrant_url: str = "http://qdrant:6333"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
