@@ -10,6 +10,7 @@ import asyncpg
 
 from app.core.config import settings
 from app.db.migrations import apply_migrations
+from app.ingestion.legacy_structure import apply_legacy_pipe_structure
 from app.ingestion.openiti import build_openiti_document, document_summary, sha256_text
 from app.ingestion.openiti_yml import as_strict_yaml_input
 from app.ingestion.repository import SourceDescriptor, persist_openiti_document
@@ -98,7 +99,18 @@ async def _run(args: argparse.Namespace) -> None:
         author_metadata_sha256=sha256_text(author_yml_raw) if author_yml_raw else None,
     )
 
+    # Standard OpenITI headers (### |) are authoritative. Some corpus versions,
+    # including our pinned Bidayat al-Mujtahid text, only contain legacy-looking
+    # paragraph lines such as "# | كتاب ...". In that case we derive a
+    # conservative structure from explicit Arabic heading cues and mark every
+    # affected chunk as main_legacy_inferred rather than pretending the source
+    # supplied canonical OpenITI structural annotation.
+    document, structure_summary = apply_legacy_pipe_structure(
+        document, max_chars=args.max_chars
+    )
+
     summary = document_summary(document)
+    summary.update(structure_summary)
     summary["quality_status"] = args.quality_status
 
     if args.dry_run:
