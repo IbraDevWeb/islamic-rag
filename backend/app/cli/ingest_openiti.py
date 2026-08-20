@@ -3,13 +3,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import asyncpg
 
 from app.core.config import settings
 from app.db.migrations import apply_migrations
-from app.ingestion.openiti import build_openiti_document, document_summary
+from app.ingestion.openiti import build_openiti_document, document_summary, sha256_text
+from app.ingestion.openiti_yml import as_strict_yaml_input
 from app.ingestion.repository import SourceDescriptor, persist_openiti_document
 
 
@@ -73,14 +75,27 @@ def build_parser() -> argparse.ArgumentParser:
 async def _run(args: argparse.Namespace) -> None:
     text_raw = _read(args.text)
     version_yml_raw = _read(args.version_yml)
+    book_yml_raw = _read(args.book_yml)
+    author_yml_raw = _read(args.author_yml)
     assert text_raw is not None and version_yml_raw is not None
 
+    # OpenITI calls these metadata files YML, but real corpus files can contain
+    # indented continuation lines with unquoted ':' characters. Parse that
+    # line-oriented format first, then pass a strict mapping to the existing
+    # document builder. Raw source hashes are restored immediately afterwards
+    # so provenance always refers to the exact downloaded files.
     document = build_openiti_document(
         text_raw,
-        version_yml_raw,
-        _read(args.book_yml),
-        _read(args.author_yml),
+        as_strict_yaml_input(version_yml_raw),
+        as_strict_yaml_input(book_yml_raw) if book_yml_raw else None,
+        as_strict_yaml_input(author_yml_raw) if author_yml_raw else None,
         max_chars=args.max_chars,
+    )
+    document = replace(
+        document,
+        version_metadata_sha256=sha256_text(version_yml_raw),
+        book_metadata_sha256=sha256_text(book_yml_raw) if book_yml_raw else None,
+        author_metadata_sha256=sha256_text(author_yml_raw) if author_yml_raw else None,
     )
 
     summary = document_summary(document)
