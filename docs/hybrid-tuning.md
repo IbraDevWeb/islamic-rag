@@ -39,16 +39,19 @@ lexical 0.20 / semantic 0.80
 lexical 0.10 / semantic 0.90
 ```
 
-Run:
+For a concise terminal result:
 
 ```powershell
-docker compose exec api python -m app.cli.tune_hybrid
+docker compose exec api python -m app.cli.tune_hybrid --compact
 ```
+
+Omit `--compact` to include complete per-type and per-difficulty metrics for every candidate.
 
 Custom lexical weights can be supplied as a comma-separated list; semantic weight is `1 - lexical`:
 
 ```powershell
 docker compose exec api python -m app.cli.tune_hybrid `
+  --compact `
   --lexical-weights "0.50,0.45,0.40,0.35,0.30,0.25,0.20,0.15,0.10"
 ```
 
