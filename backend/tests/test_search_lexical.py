@@ -1,4 +1,9 @@
-from app.search.lexical import QueryAnalysis, analyze_query, score_candidate
+from app.search.lexical import (
+    QueryAnalysis,
+    _candidate_sql,
+    analyze_query,
+    score_candidate,
+)
 
 
 def test_analyze_query_normalizes_and_deduplicates_terms():
@@ -51,3 +56,14 @@ def test_section_context_adds_a_small_ranking_bonus():
     )
 
     assert with_section[0] > without_section[0]
+
+
+def test_candidate_sql_uses_separate_ilike_predicates_for_trigram_indexing():
+    sql, limit_parameter = _candidate_sql(2)
+
+    assert "c.text_normalized ILIKE $3" in sql
+    assert "c.text_normalized ILIKE $4" in sql
+    assert " OR " in sql
+    assert "ORDER BY (CASE WHEN c.text_normalized ILIKE $3" in sql
+    assert "LIMIT $5" in sql
+    assert limit_parameter == 5
