@@ -156,25 +156,32 @@ def score_candidate(
     return score, matched_terms, phrase_hits, term_hits, section_hits
 
 
-async def search_lexical(
-    conn: asyncpg.Connection,
-    query: str,
-    *,
-    limit: int = 10,
-    candidate_limit: int | None = None,
-    work_uri: str | None = None,
-    include_rejected: bool = False,
-) -> tuple[QueryAnalysis, list[LexicalSearchResult]]:
-    if limit < 1 or limit > 100:
-        raise ValueError("limit must be between 1 and 100")
+def _candidate_sql(term_count: int) -> tuple[str, int]:
+    """Build only trusted SQL fragments; all user values remain bound parameters.
 
-    analysis = analyze_query(query)
-    candidate_limit = candidate_limit or max(limit * 50, 250)
-    candidate_limit = max(limit, min(candidate_limit, 5000))
-    patterns = [f"%{term}%" for term in analysis.terms]
+    Explicit OR predicates let PostgreSQL use the pg_trgm GIN index for each
+    ILIKE pattern and combine matches with bitmap operations. Candidates that
+    match more distinct query terms are considered before the candidate cap.
+    """
 
-    rows = await conn.fetch(
-        """
+    if term_count < 1:
+        raise ValueError("term_count must be positive")
+
+    first_pattern_parameter = 3
+    pattern_parameters = list(
+        range(first_pattern_parameter, first_pattern_parameter + term_count)
+    )
+    predicates = [
+        f"c.text_normalized ILIKE ${parameter}"
+        for parameter in pattern_parameters
+    ]
+    coverage_score = " + ".join(
+        f"CASE WHEN c.text_normalized ILIKE ${parameter} THEN 1 ELSE 0 END"
+        for parameter in pattern_parameters
+    )
+    limit_parameter = first_pattern_parameter + term_count
+
+    sql = f"""
         SELECT
             c.chunk_id,
             c.sequence_no,
@@ -212,13 +219,36 @@ async def search_lexical(
         JOIN sources s ON s.id = tv.source_id
         WHERE ($1::text IS NULL OR w.openiti_uri = $1)
           AND ($2::boolean OR tv.quality_status <> 'REJECTED')
-          AND c.text_normalized ILIKE ANY($3::text[])
-        ORDER BY c.id
-        LIMIT $4
-        """,
+          AND ({" OR ".join(predicates)})
+        ORDER BY ({coverage_score}) DESC, c.id
+        LIMIT ${limit_parameter}
+    """
+    return sql, limit_parameter
+
+
+async def search_lexical(
+    conn: asyncpg.Connection,
+    query: str,
+    *,
+    limit: int = 10,
+    candidate_limit: int | None = None,
+    work_uri: str | None = None,
+    include_rejected: bool = False,
+) -> tuple[QueryAnalysis, list[LexicalSearchResult]]:
+    if limit < 1 or limit > 100:
+        raise ValueError("limit must be between 1 and 100")
+
+    analysis = analyze_query(query)
+    candidate_limit = candidate_limit or max(limit * 50, 250)
+    candidate_limit = max(limit, min(candidate_limit, 5000))
+    patterns = [f"%{term}%" for term in analysis.terms]
+    sql, _ = _candidate_sql(len(patterns))
+
+    rows = await conn.fetch(
+        sql,
         work_uri,
         include_rejected,
-        patterns,
+        *patterns,
         candidate_limit,
     )
 
