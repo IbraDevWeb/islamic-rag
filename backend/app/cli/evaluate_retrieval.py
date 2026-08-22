@@ -7,7 +7,8 @@ import json
 import asyncpg
 
 from app.core.config import settings
-from app.evaluation.retrieval import load_benchmark, run_benchmark
+from app.evaluation.backends import RETRIEVERS, run_benchmark_for_retriever
+from app.evaluation.retrieval import load_benchmark
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -20,6 +21,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--dataset",
         default="evals/retrieval_bidayat_baseline_v2.json",
         help="Path to a retrieval benchmark JSON file.",
+    )
+    parser.add_argument(
+        "--retriever",
+        choices=sorted(RETRIEVERS),
+        default="lexical",
+        help=(
+            "Retrieval backend to evaluate. Semantic/hybrid require a READY, fresh "
+            "Qdrant index built with app.cli.index_semantic."
+        ),
     )
     parser.add_argument(
         "--fail-under-hit-rate",
@@ -89,9 +99,10 @@ async def _run(args: argparse.Namespace) -> int:
     benchmark = load_benchmark(args.dataset)
     conn = await asyncpg.connect(settings.postgres_dsn)
     try:
-        summary = await run_benchmark(
+        summary = await run_benchmark_for_retriever(
             conn,
             benchmark,
+            retriever=args.retriever,
             validate_labels=not args.skip_label_validation,
         )
     finally:
@@ -116,6 +127,7 @@ async def _run(args: argparse.Namespace) -> int:
 
     payload = summary.to_dict()
     failed_case_ids = [result.case_id for result in summary.results if not result.passed]
+    payload["retriever"] = args.retriever
     payload["failed_case_ids"] = failed_case_ids
     payload["description"] = benchmark.description
     payload["label_provenance"] = benchmark.label_provenance
