@@ -60,11 +60,36 @@ This corpus-dependent evaluation is deliberately not part of the lightweight Git
 
 Migration `002_lexical_trigram_index.sql` enables PostgreSQL `pg_trgm` and creates a GIN trigram index on `chunks.text_normalized`.
 
-The lexical candidate query emits one parameterized `ILIKE` predicate per normalized query term. This preserves user values as bound parameters while allowing PostgreSQL to use trigram index scans/bitmap combinations rather than forcing the application to interpolate user text into SQL.
+Migration `003_section_search_index.sql` makes structural context searchable through a separate `section_text_normalized` projection and a second GIN trigram index. `section_path` remains the structured provenance field; the search projection is only an acceleration/retrieval aid.
 
-Candidates matching more distinct query terms are considered before the candidate cap; the existing deterministic Python ranker then applies coverage, exact-phrase, occurrence and section-context scoring.
+Future ingestion computes `section_text_normalized` in Python with the same Arabic normalization used for query/search text. Existing rows are conservatively backfilled from their stored section path when migration `003` is applied.
 
-This is an acceleration and regression-control layer. It is **not** called BM25 and it is **not** the final hybrid retrieval design.
+## Deterministic lexical v2
+
+`deterministic_lexical_v2` addresses an important failure mode observed in the smoke benchmark: a relevant chapter can be identified by its heading even when an individual body chunk does not repeat every query term.
+
+Candidate retrieval therefore searches both:
+
+- `chunks.text_normalized` — normalized source passage text;
+- `chunks.section_text_normalized` — normalized structural heading context.
+
+A term present in either location counts toward retrieval coverage. Body occurrences, exact body phrases, section-term matches, section coverage, and exact section phrases remain separately weighted. This is still deterministic lexical evidence; it is not semantic inference.
+
+The candidate SQL emits parameterized `ILIKE` predicates for both indexed projections. User text remains bound parameters rather than interpolated SQL.
+
+This layer is **not** called BM25 and it is **not** the final hybrid retrieval design.
+
+## Regression discipline
+
+A retrieval change should be judged against the versioned benchmark rather than by visual inspection alone. When a benchmark case fails:
+
+1. inspect the returned paths/pages;
+2. determine whether the failure is caused by candidate generation, ranking, normalization, chunking, or an incorrect benchmark label;
+3. change one layer deliberately;
+4. add or update a unit/regression test that captures the failure mode;
+5. rerun the full benchmark and compare metrics before accepting the change.
+
+A smoke-suite score of 100% is necessary for this tiny dataset before moving on, but it is not evidence that the system is production-ready or that retrieval generalizes to other books.
 
 ## Before semantic retrieval
 
