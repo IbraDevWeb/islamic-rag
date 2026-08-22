@@ -10,7 +10,13 @@ def test_analyze_query_normalizes_and_deduplicates_terms():
     analysis = analyze_query("الصَّلَاة في الصلاة والسَّفَر")
 
     assert analysis.normalized == "الصلاة في الصلاة والسفر"
-    assert analysis.terms == ("الصلاة", "والسفر")
+    assert analysis.terms == ("الصلاة", "السفر")
+
+
+def test_analyze_query_detaches_common_proclitics_before_definite_article():
+    analysis = analyze_query("والسفر بالصلاة للصوم")
+
+    assert analysis.terms == ("السفر", "الصلاة", "الصوم")
 
 
 def test_score_prefers_full_term_coverage_and_exact_phrase():
