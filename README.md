@@ -133,6 +133,20 @@ Le mode `hybrid` combine `deterministic_lexical_v2` et le dense retriever par Re
 
 Détails : `docs/semantic-retrieval.md`.
 
+## Tuning du retrieval hybride
+
+Les poids lexical/sémantique peuvent être comparés automatiquement sans reconstruire les 1 538 embeddings documentaires :
+
+```powershell
+docker compose exec api python -m app.cli.tune_hybrid
+```
+
+Le sweep par défaut évalue `50/50`, `40/60`, `30/70`, `20/80` et `10/90`. Pour chaque question, les deux rankings sources sont calculés une seule fois puis réutilisés pour toutes les variantes de RRF.
+
+Le candidat recommandé maximise d'abord le pass-rate strict, puis Hit@1, MRR et Precision@k. Le tuner ne modifie jamais automatiquement le moteur public : la configuration retenue doit être inspectée avant promotion.
+
+Détails : `docs/hybrid-tuning.md`.
+
 ## Tests
 
 ```powershell
