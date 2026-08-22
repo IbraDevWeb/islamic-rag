@@ -135,5 +135,5 @@ def test_bidayat_smoke_dataset_is_valid() -> None:
     benchmark = load_benchmark(path)
 
     assert benchmark.dataset_id == "bidayat-retrieval-smoke-v1"
-    assert len(benchmark.cases) == 5
+    assert len(benchmark.cases) == 6
     assert all(case.work_uri == "0595IbnRushdHafid.BidayatMujtahid" for case in benchmark.cases)
