@@ -2,7 +2,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.search.hybrid import reciprocal_rank_fusion
+from app.search.hybrid import (
+    HYBRID_DEFAULT_LEXICAL_WEIGHT,
+    HYBRID_DEFAULT_SEMANTIC_WEIGHT,
+    HYBRID_RETRIEVAL_ID,
+    reciprocal_rank_fusion,
+)
 from app.search.semantic import SemanticSearchResult
 
 
@@ -33,6 +38,13 @@ def _semantic(chunk_id: str, page: int) -> SemanticSearchResult:
         version_uri="version",
         quality_status="UNREVIEWED",
     )
+
+
+def test_hybrid_v1_profile_is_frozen() -> None:
+    assert HYBRID_DEFAULT_LEXICAL_WEIGHT == 0.125
+    assert HYBRID_DEFAULT_SEMANTIC_WEIGHT == 0.875
+    assert HYBRID_DEFAULT_LEXICAL_WEIGHT + HYBRID_DEFAULT_SEMANTIC_WEIGHT == 1.0
+    assert HYBRID_RETRIEVAL_ID == "hybrid_rrf_l0125_s0875_lexical_v2_e5_large_v1"
 
 
 def test_rrf_rewards_agreement_between_retrievers() -> None:
