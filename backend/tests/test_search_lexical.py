@@ -60,7 +60,7 @@ def test_section_context_counts_toward_query_coverage():
     assert section_hits == 2
     assert phrase_hits == 0
     assert term_hits == 0
-    assert score >= 116.0
+    assert score == 151.0
 
 
 def test_section_context_adds_a_ranking_bonus():
