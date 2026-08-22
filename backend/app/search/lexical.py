@@ -154,13 +154,12 @@ def score_candidate(
     section_path: tuple[str, ...],
     analysis: QueryAnalysis,
 ) -> tuple[float, int, int, int, int]:
-    """Score source evidence while treating section context as retrieval evidence.
+    """Score evidence from both the chunk body and its structural context.
 
-    Text occurrences remain the strongest evidence. A query term present in a
-    section heading still counts toward coverage because a heading such as
-    "الباب الثالث في المياه" is useful source context even when a specific
-    chunk body does not repeat the word "المياه". This does not alter source
-    text or claim semantic understanding.
+    Body occurrences remain important, but a query term present in a source
+    heading counts toward coverage. A high fraction of query terms in the
+    heading receives an explicit structural-context bonus. This is lexical
+    evidence only; it does not infer meaning and never modifies source text.
     """
 
     text = text_normalized
@@ -181,11 +180,13 @@ def score_candidate(
     )
 
     coverage = matched_terms / len(analysis.terms)
+    section_coverage = section_hits / len(analysis.terms)
     score = (
         coverage * 100.0
         + min(phrase_hits, 3) * 25.0
         + min(term_hits, 20) * 2.0
         + section_hits * 8.0
+        + section_coverage * 35.0
         + min(section_phrase_hits, 2) * 20.0
     )
     return score, matched_terms, phrase_hits, term_hits, section_hits
