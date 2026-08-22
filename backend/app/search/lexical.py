@@ -154,30 +154,49 @@ def score_candidate(
     section_path: tuple[str, ...],
     analysis: QueryAnalysis,
 ) -> tuple[float, int, int, int, int]:
+    """Score source evidence while treating section context as retrieval evidence.
+
+    Text occurrences remain the strongest evidence. A query term present in a
+    section heading still counts toward coverage because a heading such as
+    "الباب الثالث في المياه" is useful source context even when a specific
+    chunk body does not repeat the word "المياه". This does not alter source
+    text or claim semantic understanding.
+    """
+
     text = text_normalized
     normalized_section = normalize_arabic(" ".join(section_path)) if section_path else ""
 
-    matched_terms = sum(1 for term in analysis.terms if term in text)
+    matched_terms = sum(
+        1
+        for term in analysis.terms
+        if term in text or term in normalized_section
+    )
     term_hits = sum(_count_occurrences(text, term) for term in analysis.terms)
     section_hits = sum(1 for term in analysis.terms if term in normalized_section)
     phrase_hits = _count_occurrences(text, analysis.normalized) if analysis.normalized else 0
+    section_phrase_hits = (
+        _count_occurrences(normalized_section, analysis.normalized)
+        if analysis.normalized and normalized_section
+        else 0
+    )
 
     coverage = matched_terms / len(analysis.terms)
     score = (
         coverage * 100.0
         + min(phrase_hits, 3) * 25.0
         + min(term_hits, 20) * 2.0
-        + section_hits * 5.0
+        + section_hits * 8.0
+        + min(section_phrase_hits, 2) * 20.0
     )
     return score, matched_terms, phrase_hits, term_hits, section_hits
 
 
 def _candidate_sql(term_count: int) -> tuple[str, int]:
-    """Build only trusted SQL fragments; all user values remain bound parameters.
+    """Build trusted SQL fragments; all user values remain bound parameters.
 
-    Explicit OR predicates let PostgreSQL use the pg_trgm GIN index for each
-    ILIKE pattern and combine matches with bitmap operations. Candidates that
-    match more distinct query terms are considered before the candidate cap.
+    Candidates may be found from either normalized source text or normalized
+    section context. Separate ILIKE predicates allow PostgreSQL to use trigram
+    indexes on both projections and combine matches with bitmap operations.
     """
 
     if term_count < 1:
@@ -188,11 +207,19 @@ def _candidate_sql(term_count: int) -> tuple[str, int]:
         range(first_pattern_parameter, first_pattern_parameter + term_count)
     )
     predicates = [
-        f"c.text_normalized ILIKE ${parameter}"
+        (
+            f"(c.text_normalized ILIKE ${parameter} "
+            f"OR c.section_text_normalized ILIKE ${parameter})"
+        )
         for parameter in pattern_parameters
     ]
     coverage_score = " + ".join(
-        f"CASE WHEN c.text_normalized ILIKE ${parameter} THEN 1 ELSE 0 END"
+        (
+            "CASE WHEN ("
+            f"c.text_normalized ILIKE ${parameter} "
+            f"OR c.section_text_normalized ILIKE ${parameter}"
+            ") THEN 1 ELSE 0 END"
+        )
         for parameter in pattern_parameters
     )
     limit_parameter = first_pattern_parameter + term_count
