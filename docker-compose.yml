@@ -40,6 +40,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data:ro
+      - model_cache:/root/.cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,3 +61,4 @@ services:
 volumes:
   postgres_data:
   qdrant_storage:
+  model_cache:
