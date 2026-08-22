@@ -84,10 +84,18 @@ After the corpus is running and migrations are applied:
 ```powershell
 docker compose exec api python -m app.cli.migrate
 
-docker compose exec api python -m app.cli.evaluate_retrieval
+docker compose exec api python -m app.cli.evaluate_retrieval --summary-only
 ```
 
-The demanding v2 baseline is now the default dataset.
+The demanding v2 baseline is now the default dataset. `--summary-only` is useful for the first run because the benchmark contains many cases.
+
+To inspect only cases that fail their strict rank requirement:
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval --failures-only
+```
+
+To print the complete per-case result payload, omit both output flags.
 
 To run only the original smoke suite:
 
@@ -104,6 +112,7 @@ Supported gates are:
 
 ```powershell
 docker compose exec api python -m app.cli.evaluate_retrieval `
+  --summary-only `
   --fail-under-hit-rate 0.90 `
   --fail-under-pass-rate 0.80 `
   --fail-under-hit-at-1 0.70 `
