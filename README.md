@@ -75,19 +75,22 @@ Contrat détaillé : `docs/search-api.md`.
 
 ## Évaluation du retrieval
 
-Une petite suite de régression versionnée permet de mesurer la recherche avant d'ajouter embeddings et synthèse LLM :
+Le projet possède maintenant deux niveaux d'évaluation :
+
+- `evals/retrieval_bidayat_v1.json` : smoke suite historique de 6 cas ;
+- `evals/retrieval_bidayat_baseline_v2.json` : baseline exigeante par défaut, avec plus de 40 cas couvrant structure, clitiques arabes, morphologie, changements d'ordre des mots, requêtes larges et discrimination entre thèmes proches.
+
+Lancer la baseline exigeante :
 
 ```powershell
 docker compose exec api python -m app.cli.evaluate_retrieval
 ```
 
-Pour échouer si une requête de référence ne retrouve plus la bonne section dans son top-k :
+Chaque exécution vérifie d'abord que les sections attendues existent réellement dans le corpus, puis renvoie notamment Hit@1, Hit@3, Hit@k, pass-rate strict, MRR, Precision@k, métriques par type de requête/difficulté, latence informative, SHA-256 du benchmark et empreinte du corpus.
 
-```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval --fail-under-hit-rate 1.0
-```
+La baseline exigeante n'est pas conçue pour afficher artificiellement 100 %. Elle sert à figer le niveau réel de `deterministic_lexical_v2`, puis à mesurer objectivement les gains futurs de Qdrant, des embeddings, de la recherche hybride et du reranking.
 
-Méthodologie : `docs/retrieval-evaluation.md`.
+Méthodologie et options de seuils : `docs/retrieval-evaluation.md`.
 
 ## Tests
 
