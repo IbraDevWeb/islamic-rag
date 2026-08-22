@@ -9,9 +9,11 @@ The API contract is designed so every returned passage can be traced back to:
 - the author and OpenITI work/version identifiers;
 - volume/page markers present in the source text;
 - section hierarchy, with an explicit structure provenance/status;
+- exact source offsets for the chunk;
 - the immutable source URL/release;
-- the deterministic chunk id and SHA-256 text hash;
-- the editorial quality status of the text version;
+- the deterministic chunk id and SHA-256 hashes for both the chunk and complete source text;
+- the editorial quality status and source quality issues;
+- rights/licensing fields without guessing unknown values;
 - a separately sourced bibliographic identity when one has been manually verified.
 
 ## Endpoint
@@ -31,9 +33,28 @@ Swagger/OpenAPI documentation is available at `/docs`.
 
 ## Provenance rules
 
-### Text provenance
+### Text and integrity provenance
 
-`source_url` and `release` identify the ingested text source. `chunk_id` and `text_hash` identify the exact returned chunk. The API returns `passage_original` separately from the normalized search representation.
+`source_url` and `release` identify the ingested text source. `source_start` and `source_end` point to the exact slice of the immutable OpenITI body used for the chunk.
+
+Integrity fields are deliberately redundant:
+
+- `chunk_id` — deterministic identity of the chunk;
+- `text_hash` — SHA-256 of the exact original chunk text;
+- `source_text_sha256` — SHA-256 of the complete downloaded source text;
+- `source_metadata_sha256` — SHA-256 of the exact downloaded version metadata file.
+
+The API returns `passage_original` separately from `passage_normalized`. Search normalization must never replace the evidentiary source text.
+
+### Quality provenance
+
+`quality_status` is the project's editorial status (`UNREVIEWED`, `ACCEPTED`, `REVIEW_REQUIRED`, or `REJECTED`). `quality_issues` carries issues/labels declared by the source metadata, such as `PRIMARY_VERSION` or `CLEANED_VERSION`.
+
+These are separate concepts: a source label such as `CLEANED_VERSION` does not automatically make the project status `ACCEPTED`.
+
+### Rights provenance
+
+The response exposes `license`, `copyright_status`, `commercial_use_allowed`, and `attribution_required`. Unknown values stay `null`; the system must not infer permissions merely because a text is publicly accessible.
 
 ### Structure provenance
 
