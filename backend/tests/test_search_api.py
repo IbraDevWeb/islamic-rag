@@ -30,6 +30,8 @@ async def _fake_search(*args, **kwargs):
         text_original="# نص أصلي",
         text_normalized="نص اصلي",
         text_hash="b" * 64,
+        source_start=12000,
+        source_end=12042,
         volume=1,
         page=121,
         page_side=None,
@@ -42,6 +44,9 @@ async def _fake_search(*args, **kwargs):
         content_kind="main_legacy_inferred",
         version_uri="0595IbnRushdHafid.BidayatMujtahid.JK000222-ara1",
         quality_status="UNREVIEWED",
+        quality_issues=("PRIMARY_VERSION", "CLEANED_VERSION"),
+        source_text_sha256="c" * 64,
+        source_metadata_sha256="d" * 64,
         work_uri="0595IbnRushdHafid.BidayatMujtahid",
         work_title=None,
         author_uri="0595IbnRushdHafid",
@@ -49,6 +54,10 @@ async def _fake_search(*args, **kwargs):
         provider="OpenITI",
         source_url="https://example.test/openiti/pinned-version",
         release="OpenITI/0600AH@test",
+        license=None,
+        copyright_status=None,
+        commercial_use_allowed=None,
+        attribution_required=None,
     )
     return analysis, [result]
 
@@ -92,6 +101,17 @@ def test_search_endpoint_returns_traceable_source_not_generated_answer(monkeypat
     assert citation["page"] == 121
     assert citation["chunk_id"] == "a" * 64
     assert citation["text_hash"] == "b" * 64
+    assert citation["source_start"] == 12000
+    assert citation["source_end"] == 12042
+    assert citation["source_text_sha256"] == "c" * 64
+    assert citation["source_metadata_sha256"] == "d" * 64
+    assert citation["quality_issues"] == ["PRIMARY_VERSION", "CLEANED_VERSION"]
+    assert citation["rights"] == {
+        "license": None,
+        "copyright_status": None,
+        "commercial_use_allowed": None,
+        "attribution_required": None,
+    }
     assert result["passage_original"] == "# نص أصلي"
 
 
