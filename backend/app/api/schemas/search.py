@@ -16,6 +16,13 @@ class BibliographicProvenance(BaseModel):
     title_latin: str | None = None
 
 
+class RightsMetadata(BaseModel):
+    license: str | None = None
+    copyright_status: str | None = None
+    commercial_use_allowed: bool | None = None
+    attribution_required: bool | None = None
+
+
 class Citation(BaseModel):
     author: str | None = None
     author_uri: str
@@ -36,10 +43,16 @@ class Citation(BaseModel):
     content_kind: str
     chunk_id: str
     text_hash: str
+    source_start: int
+    source_end: int
+    source_text_sha256: str
+    source_metadata_sha256: str
     quality_status: str
+    quality_issues: list[str] = Field(default_factory=list)
     provider: str
     source_url: str
     release: str | None = None
+    rights: RightsMetadata
 
 
 class SearchResult(BaseModel):
