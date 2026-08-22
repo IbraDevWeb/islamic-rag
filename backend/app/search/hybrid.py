@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import asyncpg
@@ -27,21 +28,44 @@ class HybridSearchResult:
     semantic_rank: int | None
 
 
+def _normalized_weights(
+    lexical_weight: float,
+    semantic_weight: float,
+) -> tuple[float, float]:
+    weights = (lexical_weight, semantic_weight)
+    if any(not math.isfinite(weight) for weight in weights):
+        raise ValueError("RRF weights must be finite")
+    if any(weight < 0 for weight in weights):
+        raise ValueError("RRF weights must be non-negative")
+    total = lexical_weight + semantic_weight
+    if total <= 0:
+        raise ValueError("At least one RRF weight must be positive")
+    return lexical_weight / total, semantic_weight / total
+
+
 def reciprocal_rank_fusion(
     lexical_results,
     semantic_results: list[SemanticSearchResult],
     *,
     limit: int,
     rrf_k: int = RRF_K,
+    lexical_weight: float = 1.0,
+    semantic_weight: float = 1.0,
 ) -> list[HybridSearchResult]:
-    """Fuse independent lexical and dense rankings without score calibration.
+    """Fuse lexical and dense rankings with weighted reciprocal rank fusion.
 
-    RRF is deliberately used instead of adding raw lexical and cosine scores, because
-    those score spaces are not comparable. Equal weights are the untuned baseline.
+    Raw lexical and cosine scores are deliberately never added because they live in
+    incomparable score spaces. Only ranks are fused. Equal weights preserve the
+    original baseline behavior; tuning can change relative influence without
+    rebuilding any embedding vectors.
     """
 
     if rrf_k < 1:
         raise ValueError("rrf_k must be positive")
+    lexical_weight, semantic_weight = _normalized_weights(
+        lexical_weight,
+        semantic_weight,
+    )
 
     merged: dict[str, dict] = {}
 
@@ -88,12 +112,12 @@ def reciprocal_rank_fusion(
     for rank, result in enumerate(lexical_results, start=1):
         entry = ensure_from_lexical(result)
         entry["lexical_rank"] = rank
-        entry["score"] += 1.0 / (rrf_k + rank)
+        entry["score"] += lexical_weight / (rrf_k + rank)
 
     for rank, result in enumerate(semantic_results, start=1):
         entry = ensure_from_semantic(result)
         entry["semantic_rank"] = rank
-        entry["score"] += 1.0 / (rrf_k + rank)
+        entry["score"] += semantic_weight / (rrf_k + rank)
 
     fused = [
         HybridSearchResult(
@@ -131,6 +155,8 @@ async def search_hybrid(
     work_uri: str | None = None,
     include_rejected: bool = False,
     pool_size: int | None = None,
+    lexical_weight: float = 1.0,
+    semantic_weight: float = 1.0,
 ) -> tuple[QueryAnalysis, list[HybridSearchResult]]:
     if limit < 1 or limit > 100:
         raise ValueError("limit must be between 1 and 100")
@@ -156,4 +182,6 @@ async def search_hybrid(
         lexical_results,
         semantic_results,
         limit=limit,
+        lexical_weight=lexical_weight,
+        semantic_weight=semantic_weight,
     )
