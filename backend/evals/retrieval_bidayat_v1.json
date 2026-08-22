@@ -1,0 +1,59 @@
+{
+  "dataset_id": "bidayat-retrieval-smoke-v1",
+  "description": "Small manually checked retrieval benchmark for the first ingested OpenITI work. It is a smoke/regression suite, not a scholarly gold standard.",
+  "label_provenance": "manual verification against the ingested Bidāyat al-Mujtahid section hierarchy and observed source passages",
+  "cases": [
+    {
+      "id": "travel-prayer",
+      "query": "الصلاة في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الصلاة",
+        "الباب الرابع في صلاة السفر"
+      ],
+      "k": 5,
+      "notes": "Previously verified against returned passages in the travel-prayer chapter."
+    },
+    {
+      "id": "qasr-travel-prayer",
+      "query": "قصر الصلاة في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الصلاة",
+        "الباب الرابع في صلاة السفر",
+        "الفصل الأول في القصر"
+      ],
+      "k": 5
+    },
+    {
+      "id": "combine-travel-prayer",
+      "query": "الجمع في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الصلاة",
+        "الباب الرابع في صلاة السفر",
+        "الفصل الثاني في الجمع"
+      ],
+      "k": 5
+    },
+    {
+      "id": "wudu",
+      "query": "الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الوضوء"
+      ],
+      "k": 5
+    },
+    {
+      "id": "wudu-water",
+      "query": "المياه في الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الوضوء",
+        "الباب الثالث في المياه"
+      ],
+      "k": 5
+    }
+  ]
+}
