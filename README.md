@@ -57,9 +57,9 @@ Qdrant :
 
 http://localhost:6333/dashboard
 
-## Recherche documentaire V1
+## Recherche documentaire V2
 
-Le premier moteur de retrieval est déterministe et lexical : il renvoie des passages sourcés, pas une réponse générée.
+Le moteur actuel est déterministe et lexical : il renvoie des passages sourcés, pas une réponse générée.
 
 Exemple :
 
@@ -69,7 +69,7 @@ Invoke-RestMethod "http://localhost:8000/search?q=الصلاة%20في%20السف
 
 Chaque résultat expose notamment le texte original, le volume/page, la hiérarchie de section, son statut explicite ou inféré, la version OpenITI, le hash du chunk, le statut qualité et la provenance bibliographique disponible.
 
-La recherche lexicale est accélérée par un index PostgreSQL `pg_trgm` créé par la migration `002_lexical_trigram_index` ; cette optimisation n'est pas présentée comme du BM25 ni comme de la recherche sémantique.
+`deterministic_lexical_v2` recherche à la fois dans le texte normalisé et dans une projection normalisée de la hiérarchie de section. Les deux projections disposent d'index PostgreSQL `pg_trgm` séparés (migrations `002` et `003`). Cette couche reste purement lexicale : elle n'est pas présentée comme du BM25 ni comme de la recherche sémantique.
 
 Contrat détaillé : `docs/search-api.md`.
 
