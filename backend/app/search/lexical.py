@@ -88,13 +88,29 @@ class LexicalSearchResult:
         return self.matched_terms / self.total_terms
 
 
+def _normalize_query_term(term: str) -> str:
+    """Conservatively detach common Arabic proclitics before definite nouns.
+
+    This is intentionally not a stemmer. It only handles forms whose remainder
+    clearly starts with the Arabic definite article, e.g. والسفر -> السفر and
+    بالصلاة -> الصلاة. Source text is never modified.
+    """
+
+    if len(term) >= 5 and term[0] in {"و", "ف", "ب", "ك"} and term[1:3] == "ال":
+        return term[1:]
+    if len(term) >= 5 and term.startswith("لل"):
+        return "ال" + term[2:]
+    return term
+
+
 def analyze_query(query: str) -> QueryAnalysis:
     normalized = normalize_arabic(query)
     raw_terms = WORD_RE.findall(normalized)
 
     deduplicated: list[str] = []
     seen: set[str] = set()
-    for term in raw_terms:
+    for raw_term in raw_terms:
+        term = _normalize_query_term(raw_term)
         key = term.lower()
         if key in seen:
             continue
