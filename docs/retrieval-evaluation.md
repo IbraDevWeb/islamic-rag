@@ -2,41 +2,80 @@
 
 ## Why this exists
 
-A RAG system should not add embeddings or answer synthesis before its retrieval quality can be measured. This project therefore keeps a deterministic retrieval benchmark alongside the code.
+A RAG system should not add embeddings or answer synthesis before retrieval quality can be measured. The project therefore keeps versioned retrieval benchmarks alongside the code and treats regressions as engineering defects rather than subjective impressions.
 
-The first dataset is intentionally small. It is a smoke/regression suite for the first ingested work, not a scholarly gold standard and not evidence that retrieval quality generalizes to the future corpus.
+No LLM judges relevance in these baselines. Labels are explicit, version-controlled and tied to the stored corpus structure.
 
-## Benchmark
+## Two benchmark levels
 
-Dataset:
+### Smoke suite
 
-```text
-backend/evals/retrieval_bidayat_v1.json
-```
+`backend/evals/retrieval_bidayat_v1.json`
 
-Each case contains:
+This small suite contains the first six manually checked queries. It is useful for fast regression checks and backward compatibility, but it is deliberately too small to represent overall retrieval quality.
 
-- a query;
-- an optional exact OpenITI work URI filter;
-- one or more section-path fragments that a relevant result must contain;
-- `k`, the maximum rank inspected;
-- optional volume/page constraints;
-- notes where useful.
+### Demanding baseline
 
-A result is considered relevant only when every declared section fragment is present in the returned section hierarchy and every optional location constraint is satisfied.
+`backend/evals/retrieval_bidayat_baseline_v2.json`
+
+This is the default evaluator dataset. It contains more than forty cases and intentionally mixes:
+
+- direct Arabic terminology;
+- nested structural targets (`كتاب` / `باب` / `فصل`);
+- attached Arabic proclitics such as `و`, `ب`, and `ل`;
+- singular/plural morphology changes that the current lexical engine may not solve;
+- word-order changes;
+- short/broad queries;
+- related legal topics that share vocabulary and therefore test discrimination.
+
+The harder cases are not added so the lexical engine can claim 100%. They are added to expose where semantic retrieval, better morphology or reranking can create measurable gains later.
+
+## Grounded labels
+
+Every positive case declares `expected_section_contains`: fragments that must all be present in a result's stored section hierarchy.
+
+At runtime, the evaluator first validates every benchmark label against the current PostgreSQL corpus. If an expected section path does not exist, evaluation stops with an error rather than counting an invented or mistyped label as a retrieval miss.
+
+This validation proves only that the labelled target exists in the corpus. It does not replace scholarly review of whether a user query should be mapped to that target.
+
+## Per-case strictness
+
+Each case has:
+
+- `k`: how many results are inspected;
+- `max_first_relevant_rank`: the highest acceptable rank for the first relevant result;
+- `query_type`: evaluation slice such as `direct`, `structural`, `clitic`, `morphology`, `paraphrase`, or `topic_discrimination`;
+- `difficulty`: `easy`, `medium`, or `hard`;
+- optional volume/page constraints.
+
+A case can therefore have a Hit@5 while still failing its strict requirement. Example: a direct chapter-name query may require rank 1, whereas a deliberately difficult singular/plural variation can be allowed anywhere in the top 5.
 
 ## Metrics
 
-The evaluator reports:
+The evaluator reports both retrieval coverage and ranking quality:
 
-- `Hit@k`: whether at least one relevant result appears within the requested top-k;
-- hit rate across all cases;
-- reciprocal rank for every case;
-- mean reciprocal rank (MRR);
-- mean rank of the first relevant result among successful cases;
-- per-case top section paths/pages for debugging regressions.
+- `Hit@k` and aggregate hit rate;
+- `Hit@1`;
+- `Hit@3`;
+- strict pass rate based on each case's `max_first_relevant_rank`;
+- reciprocal rank and mean reciprocal rank (MRR);
+- first relevant rank;
+- number of relevant results in the top-k;
+- `Precision@k` under the benchmark's section-based relevance rule;
+- median and p95 query latency as informational local measurements;
+- the same quality metrics sliced by `query_type` and by `difficulty`.
 
-No LLM judges relevance. Labels are explicit and version-controlled.
+Latency is reported for comparison, but it should not be treated as a stable cross-machine benchmark without a controlled environment.
+
+## Reproducibility fingerprints
+
+Every run emits:
+
+- `benchmark_sha256`: SHA-256 of the exact benchmark JSON file;
+- `corpus_fingerprint`: SHA-256 over the relevant ingested version identities, source-text hashes, metadata hashes, quality status, provider and release;
+- `retrieval_id`: the retrieval implementation identifier, currently `deterministic_lexical_v2`.
+
+This prevents a future result such as “MRR improved” from being detached from the exact dataset, corpus version and retrieval implementation used to produce it.
 
 ## Run locally
 
@@ -48,59 +87,51 @@ docker compose exec api python -m app.cli.migrate
 docker compose exec api python -m app.cli.evaluate_retrieval
 ```
 
-To make a regression check fail when any smoke case misses:
+The demanding v2 baseline is now the default dataset.
+
+To run only the original smoke suite:
 
 ```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval --fail-under-hit-rate 1.0
+docker compose exec api python -m app.cli.evaluate_retrieval `
+  --dataset evals/retrieval_bidayat_v1.json
 ```
 
-This corpus-dependent evaluation is deliberately not part of the lightweight GitHub Actions unit-test job, because CI does not currently provision and ingest the pinned OpenITI corpus.
+## Regression gates
+
+Do not assume the demanding baseline should start at 100%. First record the measured lexical-v2 baseline, inspect its failures, and then freeze realistic gates.
+
+Supported gates are:
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval `
+  --fail-under-hit-rate 0.90 `
+  --fail-under-pass-rate 0.80 `
+  --fail-under-hit-at-1 0.70 `
+  --fail-under-mrr 0.80
+```
+
+The numbers above are examples only, not project thresholds. Actual thresholds should be chosen after measuring the demanding baseline and then changed only through an explicit evaluation decision.
+
+`--skip-label-validation` exists only for benchmark authoring/debugging. Normal project evaluation should keep label validation enabled.
 
 ## Lexical scaling
 
 Migration `002_lexical_trigram_index.sql` enables PostgreSQL `pg_trgm` and creates a GIN trigram index on `chunks.text_normalized`.
 
-Migration `003_section_search_index.sql` makes structural context searchable through a separate `section_text_normalized` projection and a second GIN trigram index. `section_path` remains the structured provenance field; the search projection is only an acceleration/retrieval aid.
+Migration `003_section_search_index.sql` adds an indexed normalized representation of the stored section hierarchy, so candidate retrieval can use both source-body text and structural context.
 
-Future ingestion computes `section_text_normalized` in Python with the same Arabic normalization used for query/search text. Existing rows are conservatively backfilled from their stored section path when migration `003` is applied.
+The candidate query keeps all user values as bound parameters. This is an acceleration and regression-control layer. It is not called BM25 and it is not semantic retrieval.
 
-## Deterministic lexical v2
+## What the baseline still does not measure
 
-`deterministic_lexical_v2` addresses an important failure mode observed in the smoke benchmark: a relevant chapter can be identified by its heading even when an individual body chunk does not repeat every query term.
+This section-based baseline does not yet provide complete document-level qrels, graded relevance, answer faithfulness, citation entailment, cross-book retrieval, multilingual retrieval, or unanswerable-question behavior. Those require larger corpora and independently reviewed labels.
 
-Candidate retrieval therefore searches both:
+Before source-constrained LLM synthesis, the target progression is:
 
-- `chunks.text_normalized` — normalized source passage text;
-- `chunks.section_text_normalized` — normalized structural heading context.
-
-A term present in either location counts toward retrieval coverage. Body occurrences, exact body phrases, section-term matches, section coverage, and exact section phrases remain separately weighted. This is still deterministic lexical evidence; it is not semantic inference.
-
-The candidate SQL emits parameterized `ILIKE` predicates for both indexed projections. User text remains bound parameters rather than interpolated SQL.
-
-This layer is **not** called BM25 and it is **not** the final hybrid retrieval design.
-
-## Regression discipline
-
-A retrieval change should be judged against the versioned benchmark rather than by visual inspection alone. When a benchmark case fails:
-
-1. inspect the returned paths/pages;
-2. determine whether the failure is caused by candidate generation, ranking, normalization, chunking, or an incorrect benchmark label;
-3. change one layer deliberately;
-4. add or update a unit/regression test that captures the failure mode;
-5. rerun the full benchmark and compare metrics before accepting the change.
-
-A smoke-suite score of 100% is necessary for this tiny dataset before moving on, but it is not evidence that the system is production-ready or that retrieval generalizes to other books.
-
-## Before semantic retrieval
-
-The benchmark should grow with the corpus and include at least:
-
-- exact terminology queries;
-- paraphrases and morphology variants;
-- queries whose relevant evidence is not in the first lexical match;
-- cross-work queries once multiple books are ingested;
-- deliberately unanswerable queries;
-- hard negatives with similar vocabulary but wrong legal topic;
-- independently reviewed labels for higher-stakes evaluation.
-
-Only after this baseline is measurable should Qdrant embeddings and hybrid lexical/vector reranking be compared against it.
+1. freeze the lexical-v2 demanding baseline;
+2. ingest more independently sourced works;
+3. expand the benchmark across books and madhhabs;
+4. add Qdrant embeddings using the same immutable chunk identifiers;
+5. compare vector retrieval against the frozen lexical baseline;
+6. implement hybrid fusion and reranking only when metrics demonstrate a gain;
+7. create separate answer/citation-faithfulness evaluations before enabling synthesis.
