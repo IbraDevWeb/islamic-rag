@@ -16,6 +16,37 @@ def _structure_provenance(result: LexicalSearchResult) -> tuple[str, str]:
     return "none", "NONE"
 
 
+def _bibliographic_provenance(result: LexicalSearchResult) -> dict[str, Any]:
+    bibliography = get_work_bibliography(result.work_uri)
+    if bibliography is not None:
+        return bibliography.to_dict()
+
+    if result.work_title:
+        return {
+            "verification_status": "SOURCE_METADATA",
+            "scope": "ingested_openiti_work_metadata",
+            "source_name": "OpenITI work metadata",
+            "source_url": None,
+            "source_record_id": result.work_uri,
+            "verified_on": None,
+            "notes": (
+                "The display title comes from ingested OpenITI work metadata after "
+                "placeholder filtering. No independent catalogue verification is "
+                "registered for this work URI."
+            ),
+        }
+
+    return {
+        "verification_status": "UNVERIFIED",
+        "scope": "none",
+        "source_name": None,
+        "source_url": None,
+        "source_record_id": None,
+        "verified_on": None,
+        "notes": "No reliable display title is registered for this work URI.",
+    }
+
+
 def build_search_payload(
     analysis: QueryAnalysis,
     results: Iterable[LexicalSearchResult],
@@ -63,22 +94,7 @@ def build_search_payload(
                     "work_title_source_metadata": result.work_title,
                     "work_title_ar": bibliography.title_ar if bibliography else None,
                     "work_title_latin": bibliography.title_latin if bibliography else None,
-                    "bibliographic_provenance": (
-                        bibliography.to_dict()
-                        if bibliography is not None
-                        else {
-                            "verification_status": "UNVERIFIED",
-                            "scope": "none",
-                            "source_name": None,
-                            "source_url": None,
-                            "source_record_id": None,
-                            "verified_on": None,
-                            "notes": (
-                                "No curated bibliographic identity is registered "
-                                "for this work URI."
-                            ),
-                        }
-                    ),
+                    "bibliographic_provenance": _bibliographic_provenance(result),
                     "version_uri": result.version_uri,
                     "volume": result.volume,
                     "page": result.page,
