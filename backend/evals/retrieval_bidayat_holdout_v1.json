@@ -1,0 +1,269 @@
+{
+  "schema_version": 2,
+  "dataset_id": "bidayat-retrieval-holdout-v1",
+  "description": "Frozen independent retrieval holdout for Bidāyat al-Mujtahid. It was authored only after Hybrid Retrieval V1 weights (0.125 lexical / 0.875 semantic) were selected, and before any lexical/semantic/hybrid evaluation was run on these cases. All labelled top-level sections were discovered from PostgreSQL and were absent from the 51-case tuning benchmark.",
+  "label_provenance": "Candidate top-level sections were enumerated from the stored corpus by app.cli.propose_holdout_sections after excluding sections already used by bidayat-retrieval-baseline-v2. Queries were then manually authored and frozen before evaluation. Runtime corpus validation must remain enabled. These labels are retrieval-engineering artifacts, not scholarly legal judgments.",
+  "cases": [
+    {
+      "id": "holdout-ghusl-direct",
+      "query": "الغسل",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الغسل"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-ghusl-ba-clitic",
+      "query": "بالغسل",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الغسل"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-purification-impurity",
+      "query": "الطهارة من النجس",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الطهارة من النجس"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-zakat-fitr",
+      "query": "زكاة الفطر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب زكاة الفطر"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-fasting-direct",
+      "query": "الصيام",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصيام"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-fasting-singular",
+      "query": "الصوم",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصيام"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "holdout-vows-direct",
+      "query": "النذور",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب النذور"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-vow-singular",
+      "query": "النذر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب النذور"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "holdout-sacrifices-direct",
+      "query": "الضحايا",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الضحايا"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-sacrifice-singular",
+      "query": "الأضحية",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الضحايا"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "holdout-hunting",
+      "query": "الصيد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصيد"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-marriage-direct",
+      "query": "النكاح",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب النكاح"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-marriage-paraphrase",
+      "query": "الزواج",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب النكاح"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "holdout-divorce",
+      "query": "الطلاق",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الطلاق"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-zihar",
+      "query": "الظهار",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الظهار"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-lian",
+      "query": "اللعان",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب اللعان"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-currency-exchange",
+      "query": "الصرف",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصرف"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-option-sale",
+      "query": "بيع الخيار",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب بيع الخيار"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-qirad-direct",
+      "query": "القراض",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القراض"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-qirad-mudaraba",
+      "query": "المضاربة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القراض"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard",
+      "notes": "Tests a widely used alternate term against the corpus section title القراض."
+    },
+    {
+      "id": "holdout-preemption",
+      "query": "الشفعة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الشفعة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-agency",
+      "query": "الوكالة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الوكالة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "holdout-inheritance-paraphrase",
+      "query": "الميراث",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الفرائض"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "holdout-retaliation-life",
+      "query": "القصاص في النفوس",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القصاص في النفوس"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-zina",
+      "query": "الزنا",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب في أحكام الزنا"],
+      "k": 5,
+      "max_first_relevant_rank": 3,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "holdout-qadhf",
+      "query": "القذف",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القذف"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    }
+  ]
+}
