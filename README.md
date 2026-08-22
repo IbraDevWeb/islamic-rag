@@ -34,7 +34,13 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-### 3. Vérifier
+### 3. Appliquer les migrations
+
+```powershell
+docker compose exec api python -m app.cli.migrate
+```
+
+### 4. Vérifier
 
 Dans un second terminal :
 
@@ -63,7 +69,25 @@ Invoke-RestMethod "http://localhost:8000/search?q=الصلاة%20في%20السف
 
 Chaque résultat expose notamment le texte original, le volume/page, la hiérarchie de section, son statut explicite ou inféré, la version OpenITI, le hash du chunk, le statut qualité et la provenance bibliographique disponible.
 
+La recherche lexicale est accélérée par un index PostgreSQL `pg_trgm` créé par la migration `002_lexical_trigram_index` ; cette optimisation n'est pas présentée comme du BM25 ni comme de la recherche sémantique.
+
 Contrat détaillé : `docs/search-api.md`.
+
+## Évaluation du retrieval
+
+Une petite suite de régression versionnée permet de mesurer la recherche avant d'ajouter embeddings et synthèse LLM :
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval
+```
+
+Pour échouer si une requête de référence ne retrouve plus la bonne section dans son top-k :
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval --fail-under-hit-rate 1.0
+```
+
+Méthodologie : `docs/retrieval-evaluation.md`.
 
 ## Tests
 
@@ -84,3 +108,5 @@ Pour supprimer aussi les données locales :
 ```powershell
 docker compose down -v
 ```
+
+**Attention :** `docker compose down -v` supprime les volumes PostgreSQL/Qdrant locaux. Ne pas l'utiliser lorsqu'il faut conserver le corpus ingéré.
