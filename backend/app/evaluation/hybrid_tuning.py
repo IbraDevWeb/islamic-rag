@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, replace
 from time import perf_counter
 from typing import Iterable, Sequence
@@ -89,6 +90,8 @@ def validate_weight_grid(weights: Iterable[FusionWeights]) -> tuple[FusionWeight
 
     seen: set[tuple[float, float]] = set()
     for item in items:
+        if not math.isfinite(item.lexical) or not math.isfinite(item.semantic):
+            raise ValueError("Fusion weights must be finite")
         if item.lexical < 0 or item.semantic < 0:
             raise ValueError("Fusion weights must be non-negative")
         total = item.lexical + item.semantic
@@ -153,8 +156,13 @@ async def run_hybrid_weight_sweep(
     pool_size: int = 25,
     validate_labels: bool = True,
 ) -> HybridTuningReport:
-    if pool_size < 5 or pool_size > 100:
-        raise ValueError("pool_size must be between 5 and 100")
+    if pool_size < 1 or pool_size > 100:
+        raise ValueError("pool_size must be between 1 and 100")
+    largest_k = max(case.k for case in benchmark.cases)
+    if pool_size < largest_k:
+        raise ValueError(
+            f"pool_size must be at least the benchmark maximum k ({largest_k})"
+        )
     weight_grid = validate_weight_grid(weights or default_weight_grid())
 
     if validate_labels:
@@ -163,9 +171,9 @@ async def run_hybrid_weight_sweep(
     fingerprint = await corpus_fingerprint(conn, benchmark)
 
     started = perf_counter()
-    source_rankings: list[tuple[object, Sequence, Sequence]] = []
+    source_rankings: list[tuple[Sequence, Sequence]] = []
     for case in benchmark.cases:
-        lexical_analysis, lexical_results = await search_lexical(
+        _, lexical_results = await search_lexical(
             conn,
             case.query,
             limit=pool_size,
@@ -177,15 +185,13 @@ async def run_hybrid_weight_sweep(
             limit=pool_size,
             work_uri=case.work_uri,
         )
-        source_rankings.append(
-            (lexical_analysis, tuple(lexical_results), tuple(semantic_results))
-        )
+        source_rankings.append((tuple(lexical_results), tuple(semantic_results)))
     retrieval_elapsed = perf_counter() - started
 
     candidate_summaries: list[FusionCandidateSummary] = []
     for config in weight_grid:
         case_results: list[RetrievalCaseResult] = []
-        for case, (_, lexical_results, semantic_results) in zip(
+        for case, (lexical_results, semantic_results) in zip(
             benchmark.cases,
             source_rankings,
             strict=True,
