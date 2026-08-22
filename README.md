@@ -80,10 +80,16 @@ Le projet possède maintenant deux niveaux d'évaluation :
 - `evals/retrieval_bidayat_v1.json` : smoke suite historique de 6 cas ;
 - `evals/retrieval_bidayat_baseline_v2.json` : baseline exigeante par défaut, avec plus de 40 cas couvrant structure, clitiques arabes, morphologie, changements d'ordre des mots, requêtes larges et discrimination entre thèmes proches.
 
-Lancer la baseline exigeante :
+Lancer un résumé de la baseline exigeante :
 
 ```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval
+docker compose exec api python -m app.cli.evaluate_retrieval --summary-only
+```
+
+Afficher seulement les cas qui ratent leur rang cible :
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval --failures-only
 ```
 
 Chaque exécution vérifie d'abord que les sections attendues existent réellement dans le corpus, puis renvoie notamment Hit@1, Hit@3, Hit@k, pass-rate strict, MRR, Precision@k, métriques par type de requête/difficulté, latence informative, SHA-256 du benchmark et empreinte du corpus.
