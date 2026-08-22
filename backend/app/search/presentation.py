@@ -5,7 +5,7 @@ from typing import Any, Iterable
 from app.bibliography.catalog import get_work_bibliography
 from app.search.lexical import LexicalSearchResult, QueryAnalysis
 
-RETRIEVAL_ID = "deterministic_lexical_v1"
+RETRIEVAL_ID = "deterministic_lexical_v2"
 
 
 def _structure_provenance(result: LexicalSearchResult) -> tuple[str, str]:
