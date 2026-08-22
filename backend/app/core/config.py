@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
 
     qdrant_url: str = "http://qdrant:6333"
+    qdrant_dense_collection: str = "islamic_rag_dense_e5_v1"
+
+    embedding_model: str = "intfloat/multilingual-e5-large"
+    embedding_dimension: int = 1024
+    embedding_batch_size: int = 8
+    embedding_cache_dir: str = "/root/.cache/fastembed"
 
     model_config = SettingsConfigDict(
         env_file=".env",
