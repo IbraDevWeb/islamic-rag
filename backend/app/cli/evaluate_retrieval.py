@@ -57,6 +57,17 @@ def build_parser() -> argparse.ArgumentParser:
             "corpus. Intended only for benchmark authoring/debugging."
         ),
     )
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Print aggregate/slice metrics without per-case result payloads.",
+    )
+    output.add_argument(
+        "--failures-only",
+        action="store_true",
+        help="Print aggregate/slice metrics plus only strict failed cases.",
+    )
     return parser
 
 
@@ -86,7 +97,7 @@ async def _run(args: argparse.Namespace) -> int:
     finally:
         await conn.close()
 
-    failures: list[dict[str, float | str]] = []
+    threshold_failures: list[dict[str, float | str]] = []
     checks = (
         ("hit_rate", summary.hit_rate, args.fail_under_hit_rate),
         ("pass_rate", summary.pass_rate, args.fail_under_pass_rate),
@@ -95,7 +106,7 @@ async def _run(args: argparse.Namespace) -> int:
     )
     for metric, actual, minimum in checks:
         if minimum is not None and actual < minimum:
-            failures.append(
+            threshold_failures.append(
                 {
                     "metric": metric,
                     "actual": actual,
@@ -104,12 +115,23 @@ async def _run(args: argparse.Namespace) -> int:
             )
 
     payload = summary.to_dict()
+    failed_case_ids = [result.case_id for result in summary.results if not result.passed]
+    payload["failed_case_ids"] = failed_case_ids
     payload["description"] = benchmark.description
     payload["label_provenance"] = benchmark.label_provenance
-    payload["threshold_failures"] = failures
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    payload["threshold_failures"] = threshold_failures
 
-    return 2 if failures else 0
+    if args.summary_only:
+        payload.pop("results", None)
+    elif args.failures_only:
+        payload["results"] = [
+            result
+            for result in payload["results"]
+            if result.get("passed") is False
+        ]
+
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 2 if threshold_failures else 0
 
 
 def main() -> None:
