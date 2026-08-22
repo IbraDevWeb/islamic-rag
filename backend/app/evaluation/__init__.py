@@ -5,9 +5,12 @@ from app.evaluation.retrieval import (
     RetrievalBenchmarkCase,
     RetrievalCaseResult,
     RetrievalEvaluationSummary,
+    corpus_fingerprint,
     evaluate_results,
     load_benchmark,
     run_benchmark,
+    summarize_evaluation,
+    validate_benchmark_against_corpus,
 )
 
 __all__ = [
@@ -15,7 +18,10 @@ __all__ = [
     "RetrievalBenchmarkCase",
     "RetrievalCaseResult",
     "RetrievalEvaluationSummary",
+    "corpus_fingerprint",
     "evaluate_results",
     "load_benchmark",
     "run_benchmark",
+    "summarize_evaluation",
+    "validate_benchmark_against_corpus",
 ]
