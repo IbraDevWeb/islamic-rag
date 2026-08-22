@@ -56,6 +56,8 @@ class LexicalSearchResult:
     text_original: str
     text_normalized: str
     text_hash: str
+    source_start: int
+    source_end: int
     volume: int | None
     page: int | None
     page_side: str | None
@@ -64,6 +66,9 @@ class LexicalSearchResult:
     content_kind: str
     version_uri: str
     quality_status: str
+    quality_issues: tuple[str, ...]
+    source_text_sha256: str
+    source_metadata_sha256: str
     work_uri: str
     work_title: str | None
     author_uri: str
@@ -71,6 +76,10 @@ class LexicalSearchResult:
     provider: str
     source_url: str
     release: str | None
+    license: str | None
+    copyright_status: str | None
+    commercial_use_allowed: bool | None
+    attribution_required: bool | None
 
     @property
     def coverage(self) -> float:
@@ -172,6 +181,8 @@ async def search_lexical(
             c.text_original,
             c.text_normalized,
             c.text_hash,
+            c.source_start,
+            c.source_end,
             c.volume,
             c.page,
             c.page_side,
@@ -180,13 +191,20 @@ async def search_lexical(
             c.content_kind,
             tv.openiti_uri AS version_uri,
             tv.quality_status,
+            tv.quality_issues,
+            tv.source_text_sha256,
+            tv.source_metadata_sha256,
             w.openiti_uri AS work_uri,
             w.title_display AS work_title,
             a.openiti_uri AS author_uri,
             a.name_display AS author_name,
             s.provider,
             s.source_url,
-            s.release
+            s.release,
+            s.license,
+            s.copyright_status,
+            s.commercial_use_allowed,
+            s.attribution_required
         FROM chunks c
         JOIN text_versions tv ON tv.id = c.version_id
         JOIN works w ON w.id = tv.work_id
@@ -225,6 +243,8 @@ async def search_lexical(
                 text_original=row["text_original"],
                 text_normalized=row["text_normalized"],
                 text_hash=row["text_hash"],
+                source_start=row["source_start"],
+                source_end=row["source_end"],
                 volume=row["volume"],
                 page=row["page"],
                 page_side=row["page_side"],
@@ -233,6 +253,9 @@ async def search_lexical(
                 content_kind=row["content_kind"],
                 version_uri=row["version_uri"],
                 quality_status=row["quality_status"],
+                quality_issues=tuple(row["quality_issues"] or ()),
+                source_text_sha256=row["source_text_sha256"],
+                source_metadata_sha256=row["source_metadata_sha256"],
                 work_uri=row["work_uri"],
                 work_title=row["work_title"],
                 author_uri=row["author_uri"],
@@ -240,6 +263,10 @@ async def search_lexical(
                 provider=row["provider"],
                 source_url=row["source_url"],
                 release=row["release"],
+                license=row["license"],
+                copyright_status=row["copyright_status"],
+                commercial_use_allowed=row["commercial_use_allowed"],
+                attribution_required=row["attribution_required"],
             )
         )
 
