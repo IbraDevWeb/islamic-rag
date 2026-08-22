@@ -59,12 +59,7 @@ def build_embedding_passage(
     text_normalized: str,
     section_path: Sequence[str],
 ) -> str:
-    """Build the derived embedding text without altering the evidentiary source text.
-
-    multilingual-e5 is trained for asymmetric retrieval with explicit query/passage
-    prefixes. Structural context is prepended because the lexical benchmark already
-    showed that headings carry important legal-topic information.
-    """
+    """Build derived embedding text without altering evidentiary source text."""
 
     section = normalize_arabic(" / ".join(section_path)) if section_path else ""
     body = text_normalized.strip()
@@ -79,7 +74,7 @@ def build_embedding_query(query: str) -> str:
 
 
 def semantic_chunk_fingerprint(rows: Sequence[Any]) -> str:
-    """Fingerprint the exact chunk identities represented by a semantic index."""
+    """Fingerprint exact chunk identities represented by a semantic index."""
 
     digest = hashlib.sha256()
     for row in rows:
@@ -251,6 +246,37 @@ async def assert_semantic_index_ready(conn: asyncpg.Connection) -> SemanticIndex
     if manifest.embedding_schema_version != EMBEDDING_SCHEMA_VERSION:
         raise RuntimeError(
             "Semantic index schema version differs from current code; rebuild it."
+        )
+    return manifest
+
+
+async def validate_semantic_index_fresh(conn: asyncpg.Connection) -> SemanticIndexManifest:
+    """Verify manifest, exact chunk fingerprint, and Qdrant point count once per run."""
+
+    manifest = await assert_semantic_index_ready(conn)
+    rows = await fetch_semantic_index_rows(conn)
+    current_fingerprint = semantic_chunk_fingerprint(rows)
+    if current_fingerprint != manifest.corpus_fingerprint:
+        raise RuntimeError(
+            "Semantic index is stale: PostgreSQL chunk fingerprint changed. Rebuild it."
+        )
+    if len(rows) != manifest.point_count:
+        raise RuntimeError(
+            "Semantic index manifest point count differs from PostgreSQL. Rebuild it."
+        )
+
+    def qdrant_count() -> int:
+        return int(
+            get_qdrant_client().count(
+                collection_name=settings.qdrant_dense_collection,
+                exact=True,
+            ).count
+        )
+
+    actual_count = await asyncio.to_thread(qdrant_count)
+    if actual_count != manifest.point_count:
+        raise RuntimeError(
+            "Semantic index Qdrant point count differs from its manifest. Rebuild it."
         )
     return manifest
 
