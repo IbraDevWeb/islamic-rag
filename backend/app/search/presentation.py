@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from app.bibliography.catalog import get_work_bibliography
-from app.search.lexical import LexicalSearchResult, QueryAnalysis
-
-RETRIEVAL_ID = "deterministic_lexical_v2"
+from app.search.lexical import RETRIEVAL_ID, LexicalSearchResult, QueryAnalysis
 
 
 def _structure_provenance(result: LexicalSearchResult) -> tuple[str, str]:
