@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import asyncpg
 
-from app.ingestion.openiti import OpenITIDocument, metadata_json
+from app.ingestion.openiti import OpenITIDocument, metadata_json, normalize_arabic
 
 
 @dataclass(frozen=True)
@@ -183,9 +183,9 @@ async def persist_openiti_document(
             INSERT INTO chunks (
                 chunk_id, version_id, sequence_no, text_original, text_normalized,
                 text_hash, volume, page, page_side, section_path, section_title,
-                content_kind, source_start, source_end
+                section_text_normalized, content_kind, source_start, source_end
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15
             )
             """,
             [
@@ -201,6 +201,7 @@ async def persist_openiti_document(
                     chunk.page_side,
                     json.dumps(list(chunk.section_path), ensure_ascii=False),
                     chunk.section_title,
+                    normalize_arabic(" ".join(chunk.section_path)),
                     chunk.content_kind,
                     chunk.source_start,
                     chunk.source_end,
