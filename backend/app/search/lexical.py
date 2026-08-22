@@ -9,6 +9,7 @@ import asyncpg
 
 from app.ingestion.openiti import normalize_arabic
 
+RETRIEVAL_ID = "deterministic_lexical_v2"
 WORD_RE = re.compile(r"[\u0621-\u063A\u0641-\u064A\u0660-\u0669A-Za-z0-9]+")
 ARABIC_STOPWORDS = {
     "في",
