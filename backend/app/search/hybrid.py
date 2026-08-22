@@ -8,7 +8,9 @@ import asyncpg
 from app.search.lexical import QueryAnalysis, search_lexical
 from app.search.semantic import SemanticSearchResult, search_semantic
 
-HYBRID_RETRIEVAL_ID = "hybrid_rrf_lexical_v2_e5_large_v1"
+HYBRID_DEFAULT_LEXICAL_WEIGHT = 0.125
+HYBRID_DEFAULT_SEMANTIC_WEIGHT = 0.875
+HYBRID_RETRIEVAL_ID = "hybrid_rrf_l0125_s0875_lexical_v2_e5_large_v1"
 RRF_K = 60
 
 
@@ -55,9 +57,8 @@ def reciprocal_rank_fusion(
     """Fuse lexical and dense rankings with weighted reciprocal rank fusion.
 
     Raw lexical and cosine scores are deliberately never added because they live in
-    incomparable score spaces. Only ranks are fused. Equal weights preserve the
-    original baseline behavior; tuning can change relative influence without
-    rebuilding any embedding vectors.
+    incomparable score spaces. Only ranks are fused. Equal weights remain available
+    for experiments, while search_hybrid() defaults to the frozen evaluated profile.
     """
 
     if rrf_k < 1:
@@ -155,9 +156,17 @@ async def search_hybrid(
     work_uri: str | None = None,
     include_rejected: bool = False,
     pool_size: int | None = None,
-    lexical_weight: float = 1.0,
-    semantic_weight: float = 1.0,
+    lexical_weight: float = HYBRID_DEFAULT_LEXICAL_WEIGHT,
+    semantic_weight: float = HYBRID_DEFAULT_SEMANTIC_WEIGHT,
 ) -> tuple[QueryAnalysis, list[HybridSearchResult]]:
+    """Run the frozen Hybrid Retrieval V1 profile unless weights are overridden.
+
+    The default 12.5% lexical / 87.5% semantic ratio was selected on the 51-case
+    Bidāyat tuning benchmark. It is versioned as a development-tuned profile, not a
+    claim of corpus-wide optimality. Callers may still pass explicit weights for
+    evaluation experiments.
+    """
+
     if limit < 1 or limit > 100:
         raise ValueError("limit must be between 1 and 100")
 
