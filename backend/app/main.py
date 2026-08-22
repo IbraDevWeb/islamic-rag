@@ -6,7 +6,7 @@ from app.core.config import settings
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version="0.3.0",
     description=(
         "API du prototype Islamic RAG. "
         "Le LLM n'est jamais considéré comme une source. "
