@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from app.search.hybrid import reciprocal_rank_fusion
 from app.search.semantic import SemanticSearchResult
 
@@ -52,3 +54,66 @@ def test_rrf_keeps_semantic_only_candidates() -> None:
     )
 
     assert {result.chunk_id for result in fused} == {"lexical-only", "semantic-only"}
+
+
+def test_semantic_weight_can_override_lexical_tie_break() -> None:
+    lexical = [_lexical("lexical-first", 1), _lexical("semantic-first", 2)]
+    semantic = [_semantic("semantic-first", 2), _semantic("lexical-first", 1)]
+
+    equal = reciprocal_rank_fusion(lexical, semantic, limit=2)
+    semantic_heavy = reciprocal_rank_fusion(
+        lexical,
+        semantic,
+        limit=2,
+        lexical_weight=0.2,
+        semantic_weight=0.8,
+    )
+
+    assert equal[0].chunk_id == "lexical-first"
+    assert semantic_heavy[0].chunk_id == "semantic-first"
+
+
+def test_rrf_normalizes_equivalent_weight_ratios() -> None:
+    lexical = [_lexical("a", 1), _lexical("b", 2)]
+    semantic = [_semantic("b", 2), _semantic("a", 1)]
+
+    first = reciprocal_rank_fusion(
+        lexical,
+        semantic,
+        limit=2,
+        lexical_weight=1,
+        semantic_weight=3,
+    )
+    second = reciprocal_rank_fusion(
+        lexical,
+        semantic,
+        limit=2,
+        lexical_weight=0.25,
+        semantic_weight=0.75,
+    )
+
+    assert [item.chunk_id for item in first] == [item.chunk_id for item in second]
+    assert [item.score for item in first] == pytest.approx([item.score for item in second])
+
+
+def test_rrf_rejects_invalid_weights() -> None:
+    lexical = [_lexical("a", 1)]
+    semantic = [_semantic("a", 1)]
+
+    with pytest.raises(ValueError, match="non-negative"):
+        reciprocal_rank_fusion(
+            lexical,
+            semantic,
+            limit=1,
+            lexical_weight=-0.1,
+            semantic_weight=1.1,
+        )
+
+    with pytest.raises(ValueError, match="At least one"):
+        reciprocal_rank_fusion(
+            lexical,
+            semantic,
+            limit=1,
+            lexical_weight=0,
+            semantic_weight=0,
+        )
