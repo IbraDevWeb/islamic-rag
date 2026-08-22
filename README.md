@@ -51,11 +51,27 @@ Qdrant :
 
 http://localhost:6333/dashboard
 
+## Recherche documentaire V1
+
+Le premier moteur de retrieval est déterministe et lexical : il renvoie des passages sourcés, pas une réponse générée.
+
+Exemple :
+
+```powershell
+Invoke-RestMethod "http://localhost:8000/search?q=الصلاة%20في%20السفر&work_uri=0595IbnRushdHafid.BidayatMujtahid&limit=5"
+```
+
+Chaque résultat expose notamment le texte original, le volume/page, la hiérarchie de section, son statut explicite ou inféré, la version OpenITI, le hash du chunk, le statut qualité et la provenance bibliographique disponible.
+
+Contrat détaillé : `docs/search-api.md`.
+
 ## Tests
 
 ```powershell
 docker compose exec api pytest -q
 ```
+
+Les tests backend sont également exécutés par GitHub Actions sur `main` et sur les pull requests.
 
 ## Arrêt
 
