@@ -15,6 +15,17 @@
       "notes": "Previously verified against returned passages in the travel-prayer chapter."
     },
     {
+      "id": "travel-prayer-with-conjunction",
+      "query": "الصلاة والسفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": [
+        "كتاب الصلاة",
+        "الباب الرابع في صلاة السفر"
+      ],
+      "k": 5,
+      "notes": "Regression case for conservative Arabic proclitic normalization."
+    },
+    {
       "id": "qasr-travel-prayer",
       "query": "قصر الصلاة في السفر",
       "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
