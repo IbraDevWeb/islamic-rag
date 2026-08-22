@@ -143,3 +143,13 @@ def test_search_endpoint_caps_limit_at_fifty() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_search_endpoint_is_present_in_openapi() -> None:
+    client = TestClient(app)
+    schema = client.get("/openapi.json").json()
+
+    assert "/search" in schema["paths"]
+    operation = schema["paths"]["/search"]["get"]
+    assert operation["tags"] == ["retrieval"]
+    assert "200" in operation["responses"]
