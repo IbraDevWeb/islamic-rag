@@ -1,0 +1,520 @@
+{
+  "schema_version": 2,
+  "dataset_id": "bidayat-retrieval-baseline-v2",
+  "description": "Expanded retrieval baseline for the first ingested Bidāyat al-Mujtahid corpus. It mixes exact structural targets, Arabic proclitics, morphology changes, word-order changes, and related-topic discrimination. It is intentionally harder than the smoke suite and is expected to expose lexical gaps before semantic retrieval is added.",
+  "label_provenance": "Expected sections are manually grounded in the section hierarchy already inspected in the ingested Bidāyat al-Mujtahid corpus. Runtime label validation additionally refuses any expected section path that does not exist in the current corpus. Query relevance labels remain a project evaluation artifact, not a scholarly legal judgment.",
+  "cases": [
+    {
+      "id": "travel-prayer",
+      "query": "الصلاة في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "travel-prayer-conjunction",
+      "query": "الصلاة والسفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "qasr-travel-prayer",
+      "query": "قصر الصلاة في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر", "الفصل الأول في القصر"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "qasr-traveler",
+      "query": "قصر المسافر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر", "الفصل الأول في القصر"],
+      "k": 5,
+      "max_first_relevant_rank": 3,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "combine-travel-prayer",
+      "query": "الجمع في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر", "الفصل الثاني في الجمع"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "combine-two-prayers-travel",
+      "query": "جمع الصلاتين في السفر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الصلاة", "الباب الرابع في صلاة السفر", "الفصل الثاني في الجمع"],
+      "k": 5,
+      "max_first_relevant_rank": 3,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "wudu",
+      "query": "الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الوضوء"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "wudu-water",
+      "query": "المياه في الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الوضوء", "الباب الثالث في المياه"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "water-wudu-word-order",
+      "query": "مياه الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الوضوء", "الباب الثالث في المياه"],
+      "k": 5,
+      "max_first_relevant_rank": 3,
+      "query_type": "word_order",
+      "difficulty": "hard"
+    },
+    {
+      "id": "wudu-invalidators",
+      "query": "نواقض الوضوء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الوضوء", "الباب الرابع في نواقض الوضوء"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "structural",
+      "difficulty": "medium"
+    },
+    {
+      "id": "tayammum",
+      "query": "التيمم",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب التيمم"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "tayammum-lam-clitic",
+      "query": "للتيمم",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب التيمم"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "hajj",
+      "query": "الحج",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الحج"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "hajj-conjunction",
+      "query": "والحج",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الحج"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "zakat",
+      "query": "الزكاة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الزكاة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "zakat-bi-clitic",
+      "query": "بالزكاة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الزكاة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "itikaf",
+      "query": "الاعتكاف",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الاعتكاف"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "jihad",
+      "query": "الجهاد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الجهاد"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "jihad-lam-clitic",
+      "query": "للجهاد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الجهاد"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "clitic",
+      "difficulty": "medium"
+    },
+    {
+      "id": "sales-plural",
+      "query": "البيوع",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب البيوع"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "sale-singular",
+      "query": "البيع",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب البيوع"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard",
+      "notes": "Tests singular query against a plural section title without pretending the lexical engine is a stemmer."
+    },
+    {
+      "id": "salam",
+      "query": "السلم",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب السلم"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "partnership",
+      "query": "الشركة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الشركة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "pledges-plural",
+      "query": "الرهون",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الرهون"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "pledge-singular",
+      "query": "الرهن",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الرهون"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "hawala",
+      "query": "الحوالة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الحوالة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "leases-plural",
+      "query": "الإجارات",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الإجارات"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "lease-singular",
+      "query": "الإجارة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الإجارات"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "bankruptcy",
+      "query": "التفليس",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب التفليس"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "interdiction",
+      "query": "الحجر",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الحجر"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium",
+      "notes": "The token can occur outside the legal chapter, so structural ranking matters."
+    },
+    {
+      "id": "theft",
+      "query": "السرقة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب السرقة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "hiraba",
+      "query": "الحرابة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الحرابة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "criminal-injuries",
+      "query": "الجنايات",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الجنايات"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "wounds",
+      "query": "الجراح",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الجراح"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "blood-money-souls",
+      "query": "الديات في النفوس",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الديات في النفوس"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "blood-money-less-than-soul",
+      "query": "الديات فيما دون النفس",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الديات فيما دون النفس"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "slaughter",
+      "query": "الذبائح",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الذبائح"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "foods-drinks",
+      "query": "الأطعمة والأشربة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الأطعمة والأشربة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "food-drink-singular",
+      "query": "الطعام والشراب",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الأطعمة والأشربة"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "oaths",
+      "query": "الأيمان",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الأيمان"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "ila",
+      "query": "الإيلاء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الإيلاء"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "judgments-plural",
+      "query": "الأقضية",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الأقضية"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "judgment-singular",
+      "query": "القضاء",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الأقضية"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "morphology",
+      "difficulty": "hard"
+    },
+    {
+      "id": "mothers-of-children",
+      "query": "أمهات الأولاد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب أمهات الأولاد"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "mother-of-child-singular",
+      "query": "أم الولد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب أمهات الأولاد"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "dead-rulings",
+      "query": "أحكام الميت",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب أحكام الميت"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "dead-short-query",
+      "query": "الميت",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب أحكام الميت"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "broad",
+      "difficulty": "hard"
+    },
+    {
+      "id": "juala",
+      "query": "الجعل",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الجعل"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "istihqaq",
+      "query": "الاستحقاق",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الاستحقاق"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "tadbir",
+      "query": "التدبير",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب التدبير"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "topic_discrimination",
+      "difficulty": "medium"
+    },
+    {
+      "id": "ihdad",
+      "query": "الإحداد",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الإحداد"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    }
+  ]
+}
