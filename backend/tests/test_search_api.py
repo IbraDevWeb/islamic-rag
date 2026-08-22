@@ -81,7 +81,7 @@ def test_search_endpoint_returns_traceable_source_not_generated_answer(monkeypat
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["retrieval"] == "deterministic_lexical_v1"
+    assert payload["retrieval"] == "deterministic_lexical_v2"
     assert payload["generated_answer"] is None
     assert payload["count"] == 1
 
