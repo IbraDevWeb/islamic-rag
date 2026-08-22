@@ -59,7 +59,7 @@ http://localhost:6333/dashboard
 
 ## Recherche documentaire V2
 
-Le moteur actuel est déterministe et lexical : il renvoie des passages sourcés, pas une réponse générée.
+Le moteur public actuel reste déterministe et lexical : il renvoie des passages sourcés, pas une réponse générée.
 
 Exemple :
 
@@ -78,25 +78,60 @@ Contrat détaillé : `docs/search-api.md`.
 Le projet possède maintenant deux niveaux d'évaluation :
 
 - `evals/retrieval_bidayat_v1.json` : smoke suite historique de 6 cas ;
-- `evals/retrieval_bidayat_baseline_v2.json` : baseline exigeante par défaut, avec plus de 40 cas couvrant structure, clitiques arabes, morphologie, changements d'ordre des mots, requêtes larges et discrimination entre thèmes proches.
+- `evals/retrieval_bidayat_baseline_v2.json` : baseline exigeante par défaut de 51 cas couvrant structure, clitiques arabes, morphologie, changements d'ordre des mots, requêtes larges et discrimination entre thèmes proches.
 
-Lancer un résumé de la baseline exigeante :
+Lancer un résumé de la baseline lexicale :
 
 ```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval --summary-only
+docker compose exec api python -m app.cli.evaluate_retrieval --retriever lexical --summary-only
 ```
 
 Afficher seulement les cas qui ratent leur rang cible :
 
 ```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval --failures-only
+docker compose exec api python -m app.cli.evaluate_retrieval --retriever lexical --failures-only
 ```
 
 Chaque exécution vérifie d'abord que les sections attendues existent réellement dans le corpus, puis renvoie notamment Hit@1, Hit@3, Hit@k, pass-rate strict, MRR, Precision@k, métriques par type de requête/difficulté, latence informative, SHA-256 du benchmark et empreinte du corpus.
 
-La baseline exigeante n'est pas conçue pour afficher artificiellement 100 %. Elle sert à figer le niveau réel de `deterministic_lexical_v2`, puis à mesurer objectivement les gains futurs de Qdrant, des embeddings, de la recherche hybride et du reranking.
+La baseline exigeante n'est pas conçue pour afficher artificiellement 100 %. Elle sert à figer le niveau réel d'un moteur puis à mesurer objectivement ses successeurs.
 
 Méthodologie et options de seuils : `docs/retrieval-evaluation.md`.
+
+## Semantic retrieval expérimental
+
+Une couche dense locale est maintenant disponible pour **comparaison**, sans remplacer automatiquement `/search`.
+
+Modèle par défaut :
+
+```text
+intfloat/multilingual-e5-large
+```
+
+La première exécution nécessite de reconstruire l'image API car FastEmbed/Qdrant Client sont de nouvelles dépendances :
+
+```powershell
+docker compose up -d --build api
+docker compose exec api python -m app.cli.migrate
+```
+
+Construire ensuite le Qdrant dense index dérivé :
+
+```powershell
+docker compose exec api python -m app.cli.index_semantic
+```
+
+Puis comparer exactement le même benchmark :
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval --retriever semantic --summary-only
+
+docker compose exec api python -m app.cli.evaluate_retrieval --retriever hybrid --summary-only
+```
+
+Le mode `hybrid` combine `deterministic_lexical_v2` et le dense retriever par Reciprocal Rank Fusion, sans additionner des scores de nature différente. L'index Qdrant est accompagné d'un manifeste PostgreSQL qui vérifie modèle, dimension, schéma, fingerprint des chunks et nombre de points avant toute évaluation sémantique/hybride.
+
+Détails : `docs/semantic-retrieval.md`.
 
 ## Tests
 
@@ -118,4 +153,4 @@ Pour supprimer aussi les données locales :
 docker compose down -v
 ```
 
-**Attention :** `docker compose down -v` supprime les volumes PostgreSQL/Qdrant locaux. Ne pas l'utiliser lorsqu'il faut conserver le corpus ingéré.
+**Attention :** `docker compose down -v` supprime les volumes PostgreSQL/Qdrant locaux ainsi que le cache du modèle. Ne pas l'utiliser lorsqu'il faut conserver le corpus ingéré ou éviter de retélécharger les embeddings.
