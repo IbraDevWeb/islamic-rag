@@ -1,8 +1,8 @@
-# Search API v1 — deterministic source retrieval
+# Search API v2 — deterministic source retrieval
 
 ## Purpose
 
-`GET /search` exposes the first retrieval layer of Islamic RAG. It retrieves and ranks source passages; it does **not** generate a fatwa, legal conclusion, or synthetic answer.
+`GET /search` exposes the deterministic retrieval layer of Islamic RAG. It retrieves and ranks source passages; it does **not** generate a fatwa, legal conclusion, or synthetic answer.
 
 The API contract is designed so every returned passage can be traced back to:
 
@@ -79,11 +79,16 @@ This bibliographic record verifies the **work identity/title only**. It does not
 
 If no curated record exists, the API returns `verification_status: UNVERIFIED` rather than inventing bibliographic data.
 
-## Retrieval v1
+## Retrieval v2
 
-Current retrieval identifier: `deterministic_lexical_v1`.
+Current retrieval identifier: `deterministic_lexical_v2`.
 
-The ranker uses normalized query terms, term coverage, exact-phrase hits, occurrence counts, and a small section-context bonus. It is deterministic and contains no LLM step.
+The ranker remains fully deterministic and contains no LLM step. It now retrieves lexical evidence from two indexed projections:
+
+- normalized source passage text;
+- normalized section-heading context.
+
+A query term found in either location contributes to coverage. Body occurrences, exact body phrases, section-term matches, section coverage, and exact section phrases are weighted separately. This allows a chapter heading to provide useful lexical evidence without pretending the engine understands semantic equivalence.
 
 The response deliberately includes:
 
@@ -97,8 +102,8 @@ This makes the current boundary explicit: retrieval is implemented; answer synth
 
 Before LLM synthesis, the intended progression is:
 
-1. build a larger evaluated corpus;
-2. add scalable lexical retrieval and regression/evaluation datasets;
+1. grow the versioned retrieval benchmark and independently review labels;
+2. compare stronger lexical ranking approaches against `deterministic_lexical_v2`;
 3. index immutable chunks in Qdrant with embeddings and the same provenance identifiers;
 4. implement hybrid lexical + vector retrieval/reranking;
 5. only then add source-constrained synthesis whose claims point back to retrieved evidence.
