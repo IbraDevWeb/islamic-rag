@@ -169,7 +169,7 @@ Détails : `docs/query-expansion.md`.
 
 ## Reranking multilingue expérimental
 
-Le pipeline peut désormais prendre les 20 meilleurs candidats de `semantic-expanded`, les réhydrater depuis PostgreSQL, puis les reclasse avec un cross-encoder multilingue avant de garder le top demandé.
+Le pipeline peut prendre les 20 meilleurs candidats de `semantic-expanded`, les réhydrater depuis PostgreSQL, puis les reclasser avec un cross-encoder multilingue.
 
 Reranker V1 :
 
@@ -179,26 +179,40 @@ via onnx-community/gte-multilingual-reranker-base
 quantized ONNX ~341 MB
 ```
 
-FastEmbed est déjà présent dans l'image, donc aucun index documentaire n'est reconstruit et aucune nouvelle dépendance PyTorch n'est ajoutée.
+Le premier benchmark local a montré que cette V1 ne mérite pas d'être promue : sur la baseline de développement de 51 cas, elle conserve 50/51 passes strictes mais fait baisser Hit@1 de 98,04 % à 94,12 %, baisse le MRR et fait passer la latence médiane locale d'environ 62 ms à environ 5,28 s.
 
-Premier chargement local :
+Le backend `reranked` reste disponible pour les expériences, mais il n'est pas le chemin de retrieval préféré.
 
-```powershell
-docker compose exec api python -m app.cli.warm_reranker
+Détails : `docs/reranking.md` et `docs/reranker-v1-results.md`.
+
+## Evidence retrieval expérimental
+
+La couche suivante expose maintenant des **preuves documentaires hydratées depuis PostgreSQL** sans génération de réponse.
+
+Pipeline préféré expérimental :
+
+```text
+question
+  -> expansion terminologique contrôlée
+  -> semantic E5 dans Qdrant
+  -> ids de chunks classés
+  -> réhydratation PostgreSQL
+  -> texte original + citations + hashes
 ```
 
-Évaluer ensuite le nouveau retriever :
+Qdrant n'est donc jamais utilisé comme copie authoritative du texte. Si un id de chunk dérivé ne peut pas être retrouvé dans PostgreSQL, la requête échoue explicitement.
+
+Exemple :
 
 ```powershell
-docker compose exec api python -m app.cli.evaluate_retrieval `
-  --dataset evals/retrieval_bidayat_baseline_v2.json `
-  --retriever reranked `
-  --summary-only
+Invoke-RestMethod "http://localhost:8000/evidence?q=المضاربة&work_uri=0595IbnRushdHafid.BidayatMujtahid&limit=5"
 ```
 
-Le reranker change uniquement l'ordre des candidats. Le texte fourni au modèle est réhydraté depuis PostgreSQL ; Qdrant reste un index dérivé et n'est pas une source de vérité. Le moteur public `/search` reste inchangé.
+La réponse contient `generated_answer: null`. Cette route prépare le futur étage de synthèse : un LLM pourra plus tard recevoir uniquement ces preuves hydratées et citées, jamais des payloads Qdrant pris comme sources.
 
-Détails : `docs/reranking.md`.
+Le moteur public `/search` reste lexical et inchangé.
+
+Détails : `docs/evidence-retrieval.md`.
 
 ## Tests
 
