@@ -24,6 +24,7 @@ from app.search.expanded import (
 )
 from app.search.hybrid import HYBRID_RETRIEVAL_ID, search_hybrid
 from app.search.lexical import RETRIEVAL_ID as LEXICAL_RETRIEVAL_ID, search_lexical
+from app.search.reranker import RERANKED_RETRIEVAL_ID, search_semantic_expanded_reranked
 from app.search.semantic import (
     SEMANTIC_RETRIEVAL_ID,
     search_semantic,
@@ -47,12 +48,14 @@ RETRIEVERS: dict[str, tuple[str, SearchFunction]] = {
     "lexical-expanded": (LEXICAL_EXPANDED_RETRIEVAL_ID, search_lexical_expanded),
     "semantic-expanded": (SEMANTIC_EXPANDED_RETRIEVAL_ID, search_semantic_expanded),
     "hybrid-expanded": (HYBRID_EXPANDED_RETRIEVAL_ID, search_hybrid_expanded),
+    "reranked": (RERANKED_RETRIEVAL_ID, search_semantic_expanded_reranked),
 }
 SEMANTIC_INDEX_RETRIEVERS = {
     "semantic",
     "hybrid",
     "semantic-expanded",
     "hybrid-expanded",
+    "reranked",
 }
 
 
