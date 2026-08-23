@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "dataset_id": "retrieval-terminology-expansion-dev-v1",
+  "description": "Small development-only retrieval set for testing curated terminology expansion after the frozen Bidāyat holdout exposed a candidate-recall failure for المضاربة targeting كتاب القراض. This dataset is intentionally contaminated by that diagnosis and must never be presented as an independent holdout.",
+  "label_provenance": "All expected sections already exist in the stored Bidāyat corpus and are runtime validated. The المضاربة case was copied from the diagnosed holdout failure specifically to test candidate-generation recovery. These labels are retrieval-engineering artifacts, not scholarly legal judgments.",
+  "cases": [
+    {
+      "id": "terminology-qirad-direct-control",
+      "query": "القراض",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القراض"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    },
+    {
+      "id": "terminology-qirad-mudaraba-alias",
+      "query": "المضاربة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب القراض"],
+      "k": 5,
+      "max_first_relevant_rank": 5,
+      "query_type": "paraphrase",
+      "difficulty": "hard"
+    },
+    {
+      "id": "terminology-partnership-control",
+      "query": "الشركة",
+      "work_uri": "0595IbnRushdHafid.BidayatMujtahid",
+      "expected_section_contains": ["كتاب الشركة"],
+      "k": 5,
+      "max_first_relevant_rank": 1,
+      "query_type": "direct",
+      "difficulty": "easy"
+    }
+  ]
+}
