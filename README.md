@@ -75,10 +75,12 @@ Contrat détaillé : `docs/search-api.md`.
 
 ## Évaluation du retrieval
 
-Le projet possède maintenant deux niveaux d'évaluation :
+Le projet possède maintenant plusieurs jeux d'évaluation séparant développement et holdout :
 
 - `evals/retrieval_bidayat_v1.json` : smoke suite historique de 6 cas ;
-- `evals/retrieval_bidayat_baseline_v2.json` : baseline exigeante par défaut de 51 cas couvrant structure, clitiques arabes, morphologie, changements d'ordre des mots, requêtes larges et discrimination entre thèmes proches.
+- `evals/retrieval_bidayat_baseline_v2.json` : baseline de développement de 51 cas ;
+- `evals/retrieval_bidayat_holdout_v1.json` : holdout indépendant figé avant son premier résultat ;
+- `evals/retrieval_terminology_expansion_dev_v1.json` : petit dataset de développement volontairement contaminé par le diagnostic de terminologie.
 
 Lancer un résumé de la baseline lexicale :
 
@@ -94,7 +96,7 @@ docker compose exec api python -m app.cli.evaluate_retrieval --retriever lexical
 
 Chaque exécution vérifie d'abord que les sections attendues existent réellement dans le corpus, puis renvoie notamment Hit@1, Hit@3, Hit@k, pass-rate strict, MRR, Precision@k, métriques par type de requête/difficulté, latence informative, SHA-256 du benchmark et empreinte du corpus.
 
-La baseline exigeante n'est pas conçue pour afficher artificiellement 100 %. Elle sert à figer le niveau réel d'un moteur puis à mesurer objectivement ses successeurs.
+La baseline de développement n'est pas conçue pour afficher artificiellement 100 %. Elle sert à mesurer objectivement les changements de retrieval. Le holdout ne doit pas être réutilisé pour régler les hyperparamètres d'un nouveau composant.
 
 Méthodologie et options de seuils : `docs/retrieval-evaluation.md`.
 
@@ -141,11 +143,62 @@ Les poids lexical/sémantique peuvent être comparés automatiquement sans recon
 docker compose exec api python -m app.cli.tune_hybrid
 ```
 
-Le sweep par défaut évalue `50/50`, `40/60`, `30/70`, `20/80` et `10/90`. Pour chaque question, les deux rankings sources sont calculés une seule fois puis réutilisés pour toutes les variantes de RRF.
+Le profil Hybrid Retrieval V1 issu du tuning est `12,5 % lexical / 87,5 % semantic`. Le holdout indépendant a toutefois montré que le semantic seul égalait ce profil en qualité principale avec une latence plus faible ; le moteur hybride reste donc expérimental plutôt que d'être promu automatiquement.
 
-Le candidat recommandé maximise d'abord le pass-rate strict, puis Hit@1, MRR et Precision@k. Le tuner ne modifie jamais automatiquement le moteur public : la configuration retenue doit être inspectée avant promotion.
+Détails : `docs/hybrid-tuning.md` et `docs/holdout-v1-results.md`.
 
-Détails : `docs/hybrid-tuning.md`.
+## Expansion terminologique contrôlée
+
+Les échecs de candidate recall dus à des terminologies différentes peuvent être traités par un registre d'alias de retrieval versionné. Exemple actuellement validé :
+
+```text
+المضاربة <-> القراض
+```
+
+L'expansion ne modifie jamais les livres et n'est pas une source religieuse. Elle produit seulement plusieurs formulations de recherche dont les classements sont fusionnés.
+
+Retrievers disponibles :
+
+```text
+lexical-expanded
+semantic-expanded
+hybrid-expanded
+```
+
+Détails : `docs/query-expansion.md`.
+
+## Reranking multilingue expérimental
+
+Le pipeline peut désormais prendre les 20 meilleurs candidats de `semantic-expanded`, les réhydrater depuis PostgreSQL, puis les reclasse avec un cross-encoder multilingue avant de garder le top demandé.
+
+Reranker V1 :
+
+```text
+Alibaba-NLP/gte-multilingual-reranker-base
+via onnx-community/gte-multilingual-reranker-base
+quantized ONNX ~341 MB
+```
+
+FastEmbed est déjà présent dans l'image, donc aucun index documentaire n'est reconstruit et aucune nouvelle dépendance PyTorch n'est ajoutée.
+
+Premier chargement local :
+
+```powershell
+docker compose exec api python -m app.cli.warm_reranker
+```
+
+Évaluer ensuite le nouveau retriever :
+
+```powershell
+docker compose exec api python -m app.cli.evaluate_retrieval `
+  --dataset evals/retrieval_bidayat_baseline_v2.json `
+  --retriever reranked `
+  --summary-only
+```
+
+Le reranker change uniquement l'ordre des candidats. Le texte fourni au modèle est réhydraté depuis PostgreSQL ; Qdrant reste un index dérivé et n'est pas une source de vérité. Le moteur public `/search` reste inchangé.
+
+Détails : `docs/reranking.md`.
 
 ## Tests
 
@@ -167,4 +220,4 @@ Pour supprimer aussi les données locales :
 docker compose down -v
 ```
 
-**Attention :** `docker compose down -v` supprime les volumes PostgreSQL/Qdrant locaux ainsi que le cache du modèle. Ne pas l'utiliser lorsqu'il faut conserver le corpus ingéré ou éviter de retélécharger les embeddings.
+**Attention :** `docker compose down -v` supprime les volumes PostgreSQL/Qdrant locaux ainsi que le cache du modèle. Ne pas l'utiliser lorsqu'il faut conserver le corpus ingéré ou éviter de retélécharger les modèles.
