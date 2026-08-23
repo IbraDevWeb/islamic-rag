@@ -144,9 +144,21 @@ docker compose exec api python -m app.cli.evaluate_retrieval `
 
 Do **not** tune reranker decisions directly against the frozen holdout V1. The holdout has already served its role as an independent evaluation of pre-reranker retrieval. A fresh independent set is required before a later production-promotion claim.
 
+## Measured V1 result
+
+The first local benchmark does **not** satisfy promotion criteria.
+
+On the 51-case development baseline, `semantic-expanded` and `reranked` both passed 50/51 strict cases, but the reranker reduced Hit@1 from 98.04% to 94.12%, reduced MRR from 0.9902 to 0.9706, slightly reduced Precision@k, and increased median local latency from about 62 ms to about 5.28 seconds.
+
+The reranker improved the clitic slice but degraded morphology, paraphrase, and topic-discrimination top-rank quality. Its remaining strict failure was `interdiction`.
+
+**Decision: Reranker V1 remains experimental and is not part of the preferred retrieval path.**
+
+The current preferred experimental evidence path is `semantic-expanded -> PostgreSQL hydration`. Full measured values are frozen in `docs/reranker-v1-results.md`.
+
 ## Promotion criteria
 
-Reranking should only become part of the preferred retrieval pipeline if it demonstrates a meaningful gain in top-rank quality without unacceptable latency or stability cost.
+A future reranker should only become part of the preferred retrieval pipeline if it demonstrates a meaningful gain in top-rank quality without unacceptable latency or stability cost.
 
 At minimum compare:
 
@@ -158,4 +170,4 @@ At minimum compare:
 - failures by query type;
 - median and p95 latency.
 
-A reranker that only adds latency while preserving the same ranking should remain experimental.
+A reranker that only adds latency or degrades top-rank quality remains experimental.
