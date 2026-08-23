@@ -48,24 +48,32 @@ The independent holdout confirms a substantial generalization gain from dense re
 
 However, the frozen 12.5/87.5 hybrid does **not** outperform semantic retrieval on this holdout. It ties semantic retrieval on strict pass rate, Hit@k, Hit@1, Hit@3 and MRR, has slightly lower Precision@k, and roughly doubles median local query latency. Therefore the holdout does not justify claiming that Hybrid V1 is superior to semantic retrieval in general.
 
-The shared failure is `holdout-qirad-mudaraba`: query `المضاربة` targeting `كتاب القراض`. This is a terminology/paraphrase case. Before adding a cross-encoder reranker, candidate recall must be diagnosed at deeper retrieval depths. A reranker cannot recover a relevant passage that is absent from its candidate pool.
+The shared failure is `holdout-qirad-mudaraba`: query `المضاربة` targeting `كتاب القراض`. This is a terminology/paraphrase case.
 
-## Next diagnostic
+## Depth-50 diagnosis
 
-After pulling the diagnostic CLI, inspect the shared failure at depth 50:
+The case was inspected at retrieval depth 50 after the frozen holdout evaluation. All three branches reported:
 
-```powershell
-docker compose exec api python -m app.cli.diagnose_retrieval_case `
-  --dataset evals/retrieval_bidayat_holdout_v1.json `
-  --case-id holdout-qirad-mudaraba `
-  --depth 50 `
-  --show 10
+```text
+first_relevant_rank = null
+hit_within_depth = false
+reranker_candidate_status = missing_from_candidate_pool
 ```
 
-Interpretation:
+So `كتاب القراض` was absent from the top 50 lexical candidates, top 50 semantic candidates, and the resulting hybrid candidate pool.
 
-- `already_in_original_top_k`: reranking is unnecessary for candidate recall on that branch;
-- `recoverable_from_deeper_pool`: a reranker may be able to promote the relevant candidate;
-- `missing_from_candidate_pool`: improve candidate generation, terminology coverage, or the dense representation before adding a reranker.
+This rules out a reranker as the immediate fix for this failure. A cross-encoder cannot promote a relevant passage that candidate generation never retrieves.
 
-The holdout remains frozen regardless of the diagnostic outcome.
+The next development experiment is therefore controlled terminology query expansion, starting with the explicit retrieval-only alias pair:
+
+```text
+القراض <-> المضاربة
+```
+
+That change is documented in `docs/query-expansion.md` and is evaluated only on a development dataset that openly includes the diagnosed failure.
+
+## Holdout contamination boundary
+
+The original 26-case scores above remain the independent measurement of the pre-expansion lexical/semantic/hybrid engines.
+
+Once the `المضاربة -> القراض` failure informed the design of a new expanded retriever, this holdout is no longer unbiased for that new engine version. Do not rerun the expanded engine on these 26 cases and present the result as fresh generalization evidence. Use a new holdout or a later multi-work benchmark for that purpose.
