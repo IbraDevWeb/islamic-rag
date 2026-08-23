@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 8
     embedding_cache_dir: str = "/root/.cache/fastembed"
 
+    # Cross-encoder reranking is intentionally local and CPU-oriented. The model
+    # itself is registered in app.search.reranker as a quantized ONNX FastEmbed
+    # custom model; these settings control only runtime cost and candidate depth.
+    reranker_candidate_pool: int = 20
+    reranker_batch_size: int = 4
+    reranker_threads: int = 4
+    reranker_cache_dir: str = "/root/.cache/fastembed"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
