@@ -14,6 +14,14 @@ from app.evaluation.retrieval import (
     summarize_evaluation,
     validate_benchmark_against_corpus,
 )
+from app.search.expanded import (
+    HYBRID_EXPANDED_RETRIEVAL_ID,
+    LEXICAL_EXPANDED_RETRIEVAL_ID,
+    SEMANTIC_EXPANDED_RETRIEVAL_ID,
+    search_hybrid_expanded,
+    search_lexical_expanded,
+    search_semantic_expanded,
+)
 from app.search.hybrid import HYBRID_RETRIEVAL_ID, search_hybrid
 from app.search.lexical import RETRIEVAL_ID as LEXICAL_RETRIEVAL_ID, search_lexical
 from app.search.semantic import (
@@ -36,6 +44,15 @@ RETRIEVERS: dict[str, tuple[str, SearchFunction]] = {
     "lexical": (LEXICAL_RETRIEVAL_ID, search_lexical),
     "semantic": (SEMANTIC_RETRIEVAL_ID, search_semantic),
     "hybrid": (HYBRID_RETRIEVAL_ID, search_hybrid),
+    "lexical-expanded": (LEXICAL_EXPANDED_RETRIEVAL_ID, search_lexical_expanded),
+    "semantic-expanded": (SEMANTIC_EXPANDED_RETRIEVAL_ID, search_semantic_expanded),
+    "hybrid-expanded": (HYBRID_EXPANDED_RETRIEVAL_ID, search_hybrid_expanded),
+}
+SEMANTIC_INDEX_RETRIEVERS = {
+    "semantic",
+    "hybrid",
+    "semantic-expanded",
+    "hybrid-expanded",
 }
 
 
@@ -52,7 +69,7 @@ async def run_benchmark_for_retriever(
     retrieval_id, search_fn = RETRIEVERS[retriever]
     if validate_labels:
         await validate_benchmark_against_corpus(conn, benchmark)
-    if retriever in {"semantic", "hybrid"}:
+    if retriever in SEMANTIC_INDEX_RETRIEVERS:
         await validate_semantic_index_fresh(conn)
 
     fingerprint = await corpus_fingerprint(conn, benchmark)
