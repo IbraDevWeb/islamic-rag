@@ -43,7 +43,7 @@ def test_ollama_request_is_schema_constrained_and_disables_thinking():
 async def test_generate_ollama_draft_parses_structured_json():
     seen: dict = {}
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx.Request) -> httpx.Response:
         seen.update(json.loads(request.content.decode("utf-8")))
         return httpx.Response(
             200,
@@ -89,7 +89,7 @@ async def test_generate_ollama_draft_parses_structured_json():
 
 @pytest.mark.asyncio
 async def test_generate_ollama_draft_rejects_non_json_model_content():
-    async def handler(_request: httpx.Request) -> httpx.Response:
+    def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
             json={"message": {"role": "assistant", "content": "not json"}},
