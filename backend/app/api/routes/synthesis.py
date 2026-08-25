@@ -165,11 +165,6 @@ async def generate_synthesis(
         draft = SynthesisDraft.model_validate(raw_draft)
         validation_payload = validate_synthesis_draft(package, draft.model_dump())
         validation = SynthesisValidationResponse.model_validate(validation_payload)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
     except SynthesisProviderUnavailable as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -183,6 +178,11 @@ async def generate_synthesis(
     except SynthesisProviderError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
     except RuntimeError as exc:
