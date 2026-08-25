@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     reranker_threads: int = 4
     reranker_cache_dir: str = "/root/.cache/fastembed"
 
+    # Synthesis remains disabled by default. Enabling it does not promote generated
+    # text to evidence: drafts must pass structural citation validation and later a
+    # separate semantic entailment gate before they can be considered releasable.
+    synthesis_provider: str = "disabled"
+    synthesis_ollama_url: str = "http://host.docker.internal:11434"
+    synthesis_model: str = "qwen3:8b"
+    synthesis_timeout_seconds: float = 180.0
+    synthesis_temperature: float = 0.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
