@@ -31,15 +31,24 @@ class Settings(BaseSettings):
     reranker_threads: int = 4
     reranker_cache_dir: str = "/root/.cache/fastembed"
 
-    # Synthesis remains disabled by default. Enabling it does not promote generated
-    # text to evidence: drafts must pass structural citation validation and, when
-    # requested, an experimental claim-to-citation faithfulness check.
+    # Generated synthesis remains disabled by default. Providers are opt-in and
+    # generated text never becomes evidence. `groq` uses only the user's configured
+    # API key and has no paid fallback path in this application.
     synthesis_provider: str = "disabled"
+    synthesis_timeout_seconds: float = 180.0
+    synthesis_temperature: float = 0.0
+
+    # Local fallback / offline mode.
     synthesis_ollama_url: str = "http://host.docker.internal:11434"
     synthesis_model: str = "qwen3:8b"
     synthesis_verifier_model: str = "qwen3:8b"
-    synthesis_timeout_seconds: float = 180.0
-    synthesis_temperature: float = 0.0
+
+    # Cloud free-tier development mode. The key is intentionally blank by default
+    # and must only live in the untracked local .env file.
+    groq_api_key: str = ""
+    synthesis_groq_url: str = "https://api.groq.com/openai/v1"
+    synthesis_groq_model: str = "qwen/qwen3.6-27b"
+    synthesis_groq_verifier_model: str = "openai/gpt-oss-120b"
 
     model_config = SettingsConfigDict(
         env_file=".env",
