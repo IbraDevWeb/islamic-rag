@@ -59,3 +59,34 @@ class SynthesisValidationResponse(BaseModel):
     errors: list[str]
     semantic_entailment_checked: bool
     note: str
+
+
+class SynthesisGenerateRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    limit: int = Field(default=5, ge=1, le=20)
+    work_uri: str | None = Field(default=None, max_length=255)
+    include_rejected: bool = False
+
+
+class SynthesisGenerationMetadata(BaseModel):
+    provider: str
+    model: str
+    elapsed_ms: float
+    done_reason: str | None = None
+    prompt_eval_count: int | None = None
+    eval_count: int | None = None
+
+
+class SynthesisGenerationResponse(BaseModel):
+    status: Literal[
+        "STRUCTURALLY_VALID_PENDING_ENTAILMENT",
+        "REJECTED_STRUCTURAL_VALIDATION",
+    ]
+    package_id: str
+    evidence_bundle_id: str
+    provider: SynthesisGenerationMetadata
+    draft: SynthesisDraft
+    structural_validation: SynthesisValidationResponse
+    semantic_entailment_checked: bool = False
+    releasable_answer: None = None
+    note: str
