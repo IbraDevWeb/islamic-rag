@@ -17,6 +17,10 @@ from app.core.config import settings
 from app.search.evidence import search_evidence
 from app.search.evidence_bundle import build_evidence_bundle_payload
 from app.synthesis.contract import build_synthesis_package, validate_synthesis_draft
+from app.synthesis.faithfulness import (
+    not_applicable_faithfulness,
+    verify_claims_ollama,
+)
 from app.synthesis.ollama_provider import (
     SynthesisProviderError,
     SynthesisProviderInvalidResponse,
@@ -123,9 +127,10 @@ async def validate_synthesis(
     summary="Generate an opt-in source-constrained local synthesis draft",
     description=(
         "Experimental local generation. The route prepares PostgreSQL-hydrated "
-        "evidence, calls the configured Ollama model with a JSON schema, and runs "
-        "structural citation validation. Even a structurally valid draft remains "
-        "pending semantic claim-to-source entailment and is not a releasable answer."
+        "evidence, calls the configured Ollama model with a JSON schema, runs "
+        "structural citation validation, and can optionally run an experimental "
+        "claim-to-citation faithfulness check. Generated text is never returned as "
+        "a releasable answer by this prototype."
     ),
 )
 async def generate_synthesis(
@@ -165,6 +170,37 @@ async def generate_synthesis(
         draft = SynthesisDraft.model_validate(raw_draft)
         validation_payload = validate_synthesis_draft(package, draft.model_dump())
         validation = SynthesisValidationResponse.model_validate(validation_payload)
+
+        faithfulness_payload = not_applicable_faithfulness(
+            reason="Claim-to-citation faithfulness verification was not requested."
+        )
+        if not validation.valid:
+            generation_status = "REJECTED_STRUCTURAL_VALIDATION"
+        elif draft.status == "INSUFFICIENT_EVIDENCE":
+            generation_status = "STRUCTURALLY_VALID_INSUFFICIENT_EVIDENCE"
+            faithfulness_payload = not_applicable_faithfulness(
+                reason=(
+                    "The draft abstained with INSUFFICIENT_EVIDENCE and contains no "
+                    "positive factual/legal claims requiring citation entailment checks."
+                )
+            )
+        elif request.verify_claims:
+            faithfulness_payload = await verify_claims_ollama(
+                package,
+                draft.model_dump(),
+                base_url=settings.synthesis_ollama_url,
+                model=settings.synthesis_verifier_model,
+                timeout_seconds=settings.synthesis_timeout_seconds,
+                generator_model=provider_metadata["model"],
+                temperature=0.0,
+            )
+            generation_status = (
+                "FAITHFULNESS_SUPPORTED_EXPERIMENTAL"
+                if faithfulness_payload["all_claims_supported"]
+                else "REJECTED_FAITHFULNESS_VALIDATION"
+            )
+        else:
+            generation_status = "STRUCTURALLY_VALID_PENDING_ENTAILMENT"
     except SynthesisProviderUnavailable as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -173,7 +209,10 @@ async def generate_synthesis(
     except (SynthesisProviderInvalidResponse, ValidationError) as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The synthesis model returned output that does not match the draft contract",
+            detail=(
+                "The synthesis or faithfulness model returned output that does not "
+                "match its structured contract"
+            ),
         ) from exc
     except SynthesisProviderError as exc:
         raise HTTPException(
@@ -196,11 +235,7 @@ async def generate_synthesis(
             detail="Synthesis evidence storage is temporarily unavailable",
         ) from exc
 
-    generation_status = (
-        "STRUCTURALLY_VALID_PENDING_ENTAILMENT"
-        if validation.valid
-        else "REJECTED_STRUCTURAL_VALIDATION"
-    )
+    faithfulness_checked = bool(faithfulness_payload["checked"])
     return SynthesisGenerationResponse.model_validate(
         {
             "status": generation_status,
@@ -209,12 +244,14 @@ async def generate_synthesis(
             "provider": provider_metadata,
             "draft": draft.model_dump(),
             "structural_validation": validation.model_dump(),
-            "semantic_entailment_checked": False,
+            "faithfulness_validation": faithfulness_payload,
+            "semantic_entailment_checked": faithfulness_checked,
             "releasable_answer": None,
             "note": (
-                "This is a candidate draft only. It is never releasable until a "
-                "separate semantic citation-faithfulness gate verifies that each "
-                "cited source actually supports the associated claim."
+                "This remains a candidate draft. Structural citation checks do not "
+                "prove semantic support. When verify_claims=true, the additional "
+                "Ollama verifier judges only claim-to-cited-passage support and is "
+                "explicitly experimental; releasable_answer remains null."
             ),
         }
     )
