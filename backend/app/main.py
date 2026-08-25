@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 
 from app.api.routes.evidence import router as evidence_router
+from app.api.routes.evidence_bundle import router as evidence_bundle_router
 from app.api.routes.health import router as health_router
 from app.api.routes.search import router as search_router
 from app.core.config import settings
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.4.0",
+    version="0.5.0",
     description=(
         "API du prototype Islamic RAG. "
         "Le LLM n'est jamais considéré comme une source. "
@@ -18,6 +19,7 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(search_router)
 app.include_router(evidence_router)
+app.include_router(evidence_bundle_router)
 
 
 @app.get("/", tags=["system"])
