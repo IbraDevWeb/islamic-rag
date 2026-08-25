@@ -21,6 +21,7 @@ from app.synthesis.faithfulness import (
     not_applicable_faithfulness,
     verify_claims_ollama,
 )
+from app.synthesis.groq_provider import generate_groq_draft, verify_claims_groq
 from app.synthesis.ollama_provider import (
     SynthesisProviderError,
     SynthesisProviderInvalidResponse,
@@ -48,6 +49,56 @@ async def _prepare_package(
     )
     bundle = build_evidence_bundle_payload(analysis, query_variants, results)
     return build_synthesis_package(bundle)
+
+
+async def _generate_draft(package: dict) -> tuple[dict, dict]:
+    provider = settings.synthesis_provider.strip().lower()
+    if provider == "ollama":
+        return await generate_ollama_draft(
+            package,
+            base_url=settings.synthesis_ollama_url,
+            model=settings.synthesis_model,
+            timeout_seconds=settings.synthesis_timeout_seconds,
+            temperature=settings.synthesis_temperature,
+        )
+    if provider == "groq":
+        return await generate_groq_draft(
+            package,
+            base_url=settings.synthesis_groq_url,
+            api_key=settings.groq_api_key,
+            model=settings.synthesis_groq_model,
+            timeout_seconds=settings.synthesis_timeout_seconds,
+            temperature=settings.synthesis_temperature,
+        )
+    raise SynthesisProviderUnavailable(
+        "Generated synthesis is disabled. Set SYNTHESIS_PROVIDER=groq for the "
+        "configured free-tier cloud path, or SYNTHESIS_PROVIDER=ollama for local mode."
+    )
+
+
+async def _verify_claims(package: dict, draft: SynthesisDraft, generator_model: str) -> dict:
+    provider = settings.synthesis_provider.strip().lower()
+    if provider == "ollama":
+        return await verify_claims_ollama(
+            package,
+            draft.model_dump(),
+            base_url=settings.synthesis_ollama_url,
+            model=settings.synthesis_verifier_model,
+            timeout_seconds=settings.synthesis_timeout_seconds,
+            generator_model=generator_model,
+            temperature=0.0,
+        )
+    if provider == "groq":
+        return await verify_claims_groq(
+            package,
+            draft.model_dump(),
+            base_url=settings.synthesis_groq_url,
+            api_key=settings.groq_api_key,
+            model=settings.synthesis_groq_verifier_model,
+            timeout_seconds=settings.synthesis_timeout_seconds,
+            generator_model=generator_model,
+        )
+    raise SynthesisProviderUnavailable("No synthesis provider is enabled")
 
 
 @router.get(
@@ -124,13 +175,13 @@ async def validate_synthesis(
 @router.post(
     "/generate-synthesis",
     response_model=SynthesisGenerationResponse,
-    summary="Generate an opt-in source-constrained local synthesis draft",
+    summary="Generate an opt-in source-constrained synthesis draft",
     description=(
-        "Experimental local generation. The route prepares PostgreSQL-hydrated "
-        "evidence, calls the configured Ollama model with a JSON schema, runs "
-        "structural citation validation, and can optionally run an experimental "
-        "claim-to-citation faithfulness check. Generated text is never returned as "
-        "a releasable answer by this prototype."
+        "Experimental generation through the configured provider. Groq mode sends "
+        "only the prepared question/evidence package to Groq, uses Qwen for draft "
+        "generation and GPT-OSS for independent claim verification, and has no paid "
+        "fallback. Ollama remains available as an optional local mode. Generated "
+        "text is never returned as a releasable answer by this prototype."
     ),
 )
 async def generate_synthesis(
@@ -143,14 +194,6 @@ async def generate_synthesis(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Synthesis question must contain non-whitespace characters",
         )
-    if settings.synthesis_provider.lower() != "ollama":
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Generated synthesis is disabled. Set SYNTHESIS_PROVIDER=ollama "
-                "only after a local Ollama provider is ready."
-            ),
-        )
 
     try:
         package = await _prepare_package(
@@ -160,13 +203,7 @@ async def generate_synthesis(
             work_uri=request.work_uri,
             include_rejected=request.include_rejected,
         )
-        raw_draft, provider_metadata = await generate_ollama_draft(
-            package,
-            base_url=settings.synthesis_ollama_url,
-            model=settings.synthesis_model,
-            timeout_seconds=settings.synthesis_timeout_seconds,
-            temperature=settings.synthesis_temperature,
-        )
+        raw_draft, provider_metadata = await _generate_draft(package)
         draft = SynthesisDraft.model_validate(raw_draft)
         validation_payload = validate_synthesis_draft(package, draft.model_dump())
         validation = SynthesisValidationResponse.model_validate(validation_payload)
@@ -185,14 +222,10 @@ async def generate_synthesis(
                 )
             )
         elif request.verify_claims:
-            faithfulness_payload = await verify_claims_ollama(
+            faithfulness_payload = await _verify_claims(
                 package,
-                draft.model_dump(),
-                base_url=settings.synthesis_ollama_url,
-                model=settings.synthesis_verifier_model,
-                timeout_seconds=settings.synthesis_timeout_seconds,
-                generator_model=provider_metadata["model"],
-                temperature=0.0,
+                draft,
+                provider_metadata["model"],
             )
             generation_status = (
                 "FAITHFULNESS_SUPPORTED_EXPERIMENTAL"
@@ -236,6 +269,7 @@ async def generate_synthesis(
         ) from exc
 
     faithfulness_checked = bool(faithfulness_payload["checked"])
+    provider_name = provider_metadata["provider"]
     return SynthesisGenerationResponse.model_validate(
         {
             "status": generation_status,
@@ -249,9 +283,10 @@ async def generate_synthesis(
             "releasable_answer": None,
             "note": (
                 "This remains a candidate draft. Structural citation checks do not "
-                "prove semantic support. When verify_claims=true, the additional "
-                "Ollama verifier judges only claim-to-cited-passage support and is "
-                "explicitly experimental; releasable_answer remains null."
+                "prove semantic support. When verify_claims=true, the configured "
+                "verifier judges only claim-to-cited-passage support. In Groq mode "
+                "the generator and verifier are different models. No paid fallback "
+                f"is configured. Provider: {provider_name}. releasable_answer remains null."
             ),
         }
     )
