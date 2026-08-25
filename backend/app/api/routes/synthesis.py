@@ -2,18 +2,48 @@ from __future__ import annotations
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import ValidationError
 
 from app.api.deps import get_postgres_connection
 from app.api.schemas.synthesis import (
+    SynthesisDraft,
+    SynthesisGenerateRequest,
+    SynthesisGenerationResponse,
     SynthesisPackageResponse,
     SynthesisValidationRequest,
     SynthesisValidationResponse,
 )
+from app.core.config import settings
 from app.search.evidence import search_evidence
 from app.search.evidence_bundle import build_evidence_bundle_payload
 from app.synthesis.contract import build_synthesis_package, validate_synthesis_draft
+from app.synthesis.ollama_provider import (
+    SynthesisProviderError,
+    SynthesisProviderInvalidResponse,
+    SynthesisProviderUnavailable,
+    generate_ollama_draft,
+)
 
 router = APIRouter(tags=["synthesis"])
+
+
+async def _prepare_package(
+    conn: asyncpg.Connection,
+    *,
+    question: str,
+    limit: int,
+    work_uri: str | None,
+    include_rejected: bool,
+) -> dict:
+    analysis, query_variants, results = await search_evidence(
+        conn,
+        question,
+        limit=limit,
+        work_uri=work_uri,
+        include_rejected=include_rejected,
+    )
+    bundle = build_evidence_bundle_payload(analysis, query_variants, results)
+    return build_synthesis_package(bundle)
 
 
 @router.get(
@@ -33,23 +63,21 @@ async def synthesis_package(
     include_rejected: bool = Query(False),
     conn: asyncpg.Connection = Depends(get_postgres_connection),
 ) -> SynthesisPackageResponse:
-    query = q.strip()
-    if not query:
+    question = q.strip()
+    if not question:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Synthesis question must contain non-whitespace characters",
         )
 
     try:
-        analysis, query_variants, results = await search_evidence(
+        package = await _prepare_package(
             conn,
-            query,
+            question=question,
             limit=limit,
             work_uri=work_uri,
             include_rejected=include_rejected,
         )
-        bundle = build_evidence_bundle_payload(analysis, query_variants, results)
-        package = build_synthesis_package(bundle)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -87,3 +115,106 @@ async def validate_synthesis(
         request.draft.model_dump(),
     )
     return SynthesisValidationResponse.model_validate(result)
+
+
+@router.post(
+    "/generate-synthesis",
+    response_model=SynthesisGenerationResponse,
+    summary="Generate an opt-in source-constrained local synthesis draft",
+    description=(
+        "Experimental local generation. The route prepares PostgreSQL-hydrated "
+        "evidence, calls the configured Ollama model with a JSON schema, and runs "
+        "structural citation validation. Even a structurally valid draft remains "
+        "pending semantic claim-to-source entailment and is not a releasable answer."
+    ),
+)
+async def generate_synthesis(
+    request: SynthesisGenerateRequest,
+    conn: asyncpg.Connection = Depends(get_postgres_connection),
+) -> SynthesisGenerationResponse:
+    question = request.question.strip()
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Synthesis question must contain non-whitespace characters",
+        )
+    if settings.synthesis_provider.lower() != "ollama":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Generated synthesis is disabled. Set SYNTHESIS_PROVIDER=ollama "
+                "only after a local Ollama provider is ready."
+            ),
+        )
+
+    try:
+        package = await _prepare_package(
+            conn,
+            question=question,
+            limit=request.limit,
+            work_uri=request.work_uri,
+            include_rejected=request.include_rejected,
+        )
+        raw_draft, provider_metadata = await generate_ollama_draft(
+            package,
+            base_url=settings.synthesis_ollama_url,
+            model=settings.synthesis_model,
+            timeout_seconds=settings.synthesis_timeout_seconds,
+            temperature=settings.synthesis_temperature,
+        )
+        draft = SynthesisDraft.model_validate(raw_draft)
+        validation_payload = validate_synthesis_draft(package, draft.model_dump())
+        validation = SynthesisValidationResponse.model_validate(validation_payload)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except SynthesisProviderUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except (SynthesisProviderInvalidResponse, ValidationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The synthesis model returned output that does not match the draft contract",
+        ) from exc
+    except SynthesisProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Synthesis evidence retrieval is unavailable, stale, or inconsistent",
+        ) from exc
+    except asyncpg.PostgresError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Synthesis evidence storage is temporarily unavailable",
+        ) from exc
+
+    generation_status = (
+        "STRUCTURALLY_VALID_PENDING_ENTAILMENT"
+        if validation.valid
+        else "REJECTED_STRUCTURAL_VALIDATION"
+    )
+    return SynthesisGenerationResponse.model_validate(
+        {
+            "status": generation_status,
+            "package_id": package["package_id"],
+            "evidence_bundle_id": package["evidence_bundle_id"],
+            "provider": provider_metadata,
+            "draft": draft.model_dump(),
+            "structural_validation": validation.model_dump(),
+            "semantic_entailment_checked": False,
+            "releasable_answer": None,
+            "note": (
+                "This is a candidate draft only. It is never releasable until a "
+                "separate semantic citation-faithfulness gate verifies that each "
+                "cited source actually supports the associated claim."
+            ),
+        }
+    )
