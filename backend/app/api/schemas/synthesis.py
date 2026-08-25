@@ -61,11 +61,38 @@ class SynthesisValidationResponse(BaseModel):
     note: str
 
 
+class ClaimFaithfulnessCheck(BaseModel):
+    claim_index: int
+    claim_text: str
+    citation_ids: list[str]
+    verdict: Literal["SUPPORTED", "NOT_SUPPORTED", "UNCLEAR"]
+    reason: str
+
+
+class FaithfulnessValidation(BaseModel):
+    checked: bool
+    verifier_id: str | None = None
+    model: str | None = None
+    elapsed_ms: float | None = None
+    done_reason: str | None = None
+    overall_verdict: Literal[
+        "SUPPORTED",
+        "NOT_SUPPORTED",
+        "UNCLEAR",
+        "NOT_APPLICABLE",
+    ]
+    all_claims_supported: bool | None = None
+    independent_verifier_model: bool
+    checks: list[ClaimFaithfulnessCheck] = Field(default_factory=list)
+    note: str
+
+
 class SynthesisGenerateRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
     limit: int = Field(default=5, ge=1, le=20)
     work_uri: str | None = Field(default=None, max_length=255)
     include_rejected: bool = False
+    verify_claims: bool = False
 
 
 class SynthesisGenerationMetadata(BaseModel):
@@ -80,13 +107,17 @@ class SynthesisGenerationMetadata(BaseModel):
 class SynthesisGenerationResponse(BaseModel):
     status: Literal[
         "STRUCTURALLY_VALID_PENDING_ENTAILMENT",
+        "STRUCTURALLY_VALID_INSUFFICIENT_EVIDENCE",
+        "FAITHFULNESS_SUPPORTED_EXPERIMENTAL",
         "REJECTED_STRUCTURAL_VALIDATION",
+        "REJECTED_FAITHFULNESS_VALIDATION",
     ]
     package_id: str
     evidence_bundle_id: str
     provider: SynthesisGenerationMetadata
     draft: SynthesisDraft
     structural_validation: SynthesisValidationResponse
+    faithfulness_validation: FaithfulnessValidation
     semantic_entailment_checked: bool = False
     releasable_answer: None = None
     note: str
