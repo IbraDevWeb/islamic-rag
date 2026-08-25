@@ -17,7 +17,7 @@ class UTF8JSONResponse(JSONResponse):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.7.0",
+    version="0.8.0",
     default_response_class=UTF8JSONResponse,
     description=(
         "API du prototype Islamic RAG. "
