@@ -58,6 +58,17 @@ services:
       ]
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      RAG_API_URL: http://api:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   qdrant_storage:
