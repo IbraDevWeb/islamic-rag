@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0a2119"/>
+  <path d="M10 10h17M10 10v17M54 54H37M54 54V37" fill="none" stroke="#a98549" stroke-width="2" stroke-linecap="square"/>
+  <text x="32" y="39" text-anchor="middle" font-size="23" font-family="serif" fill="#f4efe5">أثر</text>
+  <circle cx="50" cy="14" r="2" fill="#a98549"/>
+</svg>
